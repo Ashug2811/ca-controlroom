@@ -1,0 +1,1426 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>CA ControlRoom</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1546a0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky tab bar over four working panes (GST, Bank to Tally, Compliance, Tax and TDS). Plain ledger-paper surfaces, mono figures. */
+:root{
+  --bg:#f3f6f6; --surface:#ffffff; --fg:#13201f; --muted:#566867; --line:#d3dcdb;
+  --accent:#0b5d64; --accent-fg:#ffffff; --accent-soft:#dcecec;
+  --good:#1e7a46; --warn:#965800; --bad:#b3261e;
+  --font-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-num:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1616; --surface:#151f1f; --fg:#e5eeed; --muted:#9bb0ae; --line:#283837;
+  --accent:#58c4ca; --accent-fg:#062123; --accent-soft:#17302f;
+  --good:#5fd08c; --warn:#e3ab4c; --bad:#ff8f86; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1616; --surface:#151f1f; --fg:#e5eeed; --muted:#9bb0ae; --line:#283837;
+  --accent:#58c4ca; --accent-fg:#062123; --accent-soft:#17302f;
+  --good:#5fd08c; --warn:#e3ab4c; --bad:#ff8f86; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto}
+header.top{padding-block:20px 8px;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;justify-content:space-between}
+.brand{margin:0 0 2px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+footer.foot{max-width:1120px;margin:40px auto 0;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 18px;justify-content:space-between}
+h1{font-size:1.35rem;margin:0;font-weight:600;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0;font-size:13px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding-block:6px 0;margin-bottom:20px}
+nav.tabs button{font:inherit;font-weight:500;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:10px 14px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--fg)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-size:1.05rem;margin:32px 0 4px;font-weight:600}
+h2:first-child{margin-top:4px}
+h3{font-size:.8rem;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+p.hint{margin:0 0 14px;color:var(--muted);max-width:70ch}
+.tab[hidden]{display:none!important}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.grid>*{min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.row>*{min-width:0}
+label.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;min-width:0;max-width:100%}
+input[type=number],input.num{font-family:var(--font-num)}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;padding:0}
+button.btn{font:inherit;font-weight:500;border-radius:4px;padding:8px 14px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg)}
+button.btn.ghost{background:transparent;color:var(--accent)}
+button.btn.small{padding:4px 9px;font-size:12px}
+button.btn:hover{filter:brightness(1.08)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.stats{display:flex;flex-wrap:wrap;gap:12px 28px;margin:14px 0}
+.stat{border-top:2px solid var(--line);padding-top:6px;min-width:120px}
+.stat.good{border-color:var(--good)}.stat.warn{border-color:var(--warn)}.stat.bad{border-color:var(--bad)}
+.stat b{display:block;font-family:var(--font-num);font-weight:500;font-size:1.1rem}
+.stat span{font-size:12px;color:var(--muted)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.tw.tall{max-height:440px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:var(--surface);position:sticky;top:0;white-space:nowrap}
+td.n,th.n{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.total td{font-weight:600;border-top:2px solid var(--line)}
+.chip{display:inline-block;border-radius:99px;padding:1px 9px;font-size:11.5px;font-weight:600;border:1px solid currentColor;white-space:nowrap}
+.chip.good{color:var(--good)}.chip.warn{color:var(--warn)}.chip.bad{color:var(--bad)}.chip.mute{color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.filters button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:99px;padding:3px 12px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+details{margin-top:10px}
+summary{cursor:pointer;color:var(--accent);font-weight:500}
+.maps{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:8px}
+.note{font-size:12.5px;color:var(--muted);max-width:75ch;margin:10px 0 0}
+.example{display:inline-block;font-size:11.5px;color:var(--warn);border:1px dashed var(--warn);border-radius:4px;padding:1px 7px;margin-left:8px}
+.err{color:var(--bad);font-weight:500}
+.best{background:var(--accent-soft)}
+.checks{display:grid;gap:4px 16px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.checks label{display:flex;gap:8px;align-items:center;font-size:13px}
+.group-t{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 4px;font-weight:600}
+td input.led{width:100%;min-width:150px;padding:4px 7px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:6px;font-size:13px;max-width:90vw;z-index:20}
+.xmlbox{width:100%;height:150px;font-family:var(--font-num);font-size:12px}
+@media (prefers-reduced-motion:no-preference){nav.tabs button{transition:color .15s,border-color .15s}}
+</style>
+
+<div class="wrap">
+<style>
+/* Theme: white, blue and yellow */
+:root{--bg:#f4f8fd;--surface:#ffffff;--fg:#0f2342;--muted:#5a6b85;--line:#d5e0ef;--accent:#1546a0;--accent-fg:#ffffff;--accent-soft:#e3edfb;--gold:#f5b81c;--good:#1e7a46;--warn:#9a5b00;--bad:#b3261e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0b1730;--surface:#12234a;--fg:#e8eefb;--muted:#9fb1d3;--line:#25396b;--accent:#6ea8ff;--accent-fg:#06142e;--accent-soft:#1a2f5e;--gold:#ffcc3d;--good:#5fd08c;--warn:#f0b24c;--bad:#ff8f86;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1730;--surface:#12234a;--fg:#e8eefb;--muted:#9fb1d3;--line:#25396b;--accent:#6ea8ff;--accent-fg:#06142e;--accent-soft:#1a2f5e;--gold:#ffcc3d;--good:#5fd08c;--warn:#f0b24c;--bad:#ff8f86;color-scheme:dark}
+header.top{border-bottom:4px solid var(--gold);padding-bottom:12px;margin-bottom:6px;align-items:center}
+.brand{display:flex;align-items:center;color:var(--accent)}
+.logo{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--gold);font-weight:700;margin-right:8px;letter-spacing:0}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--gold)}
+th{background:var(--accent-soft);color:var(--accent)}
+tr.total td{border-top-color:var(--gold)}
+footer.foot{border-top:3px solid var(--gold)}
+.print-head{display:none}
+@media print{nav.tabs,.btn,input[type=file],.filters,.no-print,textarea{display:none!important}body{background:#fff;color:#000}.print-head{display:block;border-bottom:3px solid #f5b81c;margin-bottom:10px;padding-bottom:6px;font-size:12px}.tw.tall{max-height:none}}
+</style>
+<header class="top">
+  <div><h1>CA ControlRoom</h1></div>
+  <p class="sub">GST, bank to Tally, due dates, tax, TDS and more. Files are read in your browser and never uploaded.</p>
+<div class="row no-print"><span id="who" class="who"></span><span id="sync" class="sync" hidden></span><button class="btn ghost small" id="so-btn" hidden>Sign out</button><button class="btn ghost small" id="th-btn">Light / Dark</button><button class="btn small" id="pr-btn">Print / PDF</button></div></header>
+<div class="print-head">Prepared by M/s. Malaji And Co &middot; Enquiries 7899824673 &middot; Malajiandco@yahoo.com &middot; <span id="ph-d"></span> <span id="ph-c"></span></div>
+<nav class="tabs" role="tablist" aria-label="Tools">
+  <button role="tab" data-tab="home" aria-selected="true">Home</button>
+  <button role="tab" data-tab="gst" aria-selected="false">GST</button>
+  <button role="tab" data-tab="bank" aria-selected="false">Bank to Tally</button>
+  <button role="tab" data-tab="tracker" aria-selected="false">Compliance tracker</button>
+  <button role="tab" data-tab="calendar" aria-selected="false">Due-date calendar</button>
+  <button role="tab" data-tab="tax" aria-selected="false">Tax and TDS</button>
+  <button role="tab" data-tab="more" aria-selected="false">More modules</button>
+  <button role="tab" data-tab="clients" aria-selected="false">Clients</button>
+  <button role="tab" data-tab="assign" aria-selected="false">Assignments and fees</button>
+  <button role="tab" data-tab="settings" aria-selected="false">Rates and settings</button>
+  <button role="tab" data-tab="billing" aria-selected="false">Billing</button>
+  <button role="tab" data-tab="work" aria-selected="false">Time and work</button>
+  <button role="tab" data-tab="inbox" aria-selected="false">Document inbox</button>
+  <button role="tab" data-tab="team" aria-selected="false">Team</button>
+  <button role="tab" data-tab="backup" aria-selected="false">Backup</button>
+</nav>
+
+
+<section class="tab" id="tab-home">
+  <h2>Dashboard</h2><p class="hint">Open work, fees and shortcuts. Figures come from the Clients and Assignments tabs.</p>
+  <div class="stats" id="dh-stats"></div>
+  <div class="grid"><div class="panel"><h3>Next open assignments</h3><div class="tw"><table id="dh-list"></table></div></div>
+  <div class="panel stack"><h3>Shortcuts</h3><div class="filters" id="dh-go"></div><p class="note">Rates in this tool follow GST 2.0 (0%, 5%, 18%, 40%) and the notified TDS and income tax slabs. Confirm against current notifications before relying on a figure.</p></div></div>
+</section>
+<section class="tab" id="tab-clients" hidden>
+  <h2>Client master</h2><p class="hint">Save each client once. "Use" fills the client name in reminders and print-outs, and the state code in the GSTR-1 summary.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Name<input id="cm-n" style="width:190px"></label><label class="fld">GSTIN<input id="cm-g" style="width:170px"></label><label class="fld">PAN<input id="cm-p" style="width:120px"></label><label class="fld">Mobile<input id="cm-ph" style="width:130px"></label><label class="fld">Email<input id="cm-em" type="email" style="width:190px"></label><button class="btn" id="cm-save">Add client</button></div></div>
+  <div class="tw" style="margin-top:14px"><table id="cm-list"></table></div>
+</section>
+<section class="tab" id="tab-assign" hidden>
+  <h2>Assignments and fees</h2><p class="hint">Track each assignment, who is doing it, status and fees. "Receipt" prepares a receipt below the table; use Print / PDF to save it.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Client<input id="as-c" list="as-cl" style="width:170px"><datalist id="as-cl"></datalist></label>
+    <label class="fld">Service<input id="as-s" value="GST return filing" style="width:170px"></label>
+    <label class="fld">Allocated to (CA)<input id="as-ca" style="width:150px"></label>
+    <label class="fld">Due date<input id="as-d" type="date"></label>
+    <label class="fld">Fee (₹)<input class="num" id="as-f" type="number" style="width:100px"></label>
+    <label class="fld">Received (₹)<input class="num" id="as-r" type="number" value="0" style="width:100px"></label>
+    <button class="btn" id="as-save">Add</button></div></div>
+  <div class="stats" id="as-stats"></div><div class="tw"><table id="as-list"></table></div><div id="as-rc"></div>
+</section>
+<section class="tab" id="tab-settings" hidden>
+  <h2>Rates and settings</h2><p class="hint">Edit the rates used by the calculators when a notification changes them, then save. Changes are saved for the whole firm and included in the backup. Standard deduction, rebate and surcharge rules for income tax are not editable here.</p>
+  <div class="panel stack"><h3>GST rate options</h3><div class="row"><label class="fld">Rates, comma separated<input id="st-g" style="width:300px"></label></div>
+  <h3>Income tax: new regime slabs</h3><label class="fld">One slab per line as <b>up to amount, rate %</b>. Leave the amount blank on the last line.<textarea id="st-s" rows="7" style="width:260px"></textarea></label>
+  <h3>TDS rates and thresholds</h3><div class="tw tall"><table id="st-t"></table></div>
+  <div class="row"><label class="fld">Rates last reviewed on<input id="st-d" type="date"></label><button class="btn" id="st-save">Save rates</button><button class="btn ghost" id="st-reset">Reset to built-in rates</button></div></div>
+</section>
+<section class="tab" id="tab-backup" hidden>
+  <h2>Backup and restore</h2><p class="hint">Your data is saved online for the whole firm and every save is kept for 90 days. A backup file is still useful as an extra copy. To bring data over from the old single-file tool, save a backup there and restore it here.</p>
+  <div class="panel row"><button class="btn" id="bk-exp">Save backup</button><label class="fld">Restore from backup<input type="file" id="bk-imp" accept=".json"></label></div>
+  </section>
+
+
+<!-- ============ GST ============ -->
+<section class="tab" id="tab-gst">
+  <h2>GSTR-2B vs books reconciliation</h2>
+  <p class="hint">Upload your purchase register and the GSTR-2B B2B sheet (Excel or CSV). Rows are matched on supplier GSTIN and invoice number, ignoring dashes, slashes and leading zeros.</p>
+  <div class="grid">
+    <div class="panel stack">
+      <h3>Purchase register (books)</h3>
+      <input type="file" id="gf-books" multiple accept=".xlsx,.xls,.csv" aria-label="Purchase register file">
+      <div id="gs-books" class="note">No file loaded.</div>
+      <details><summary>Column mapping</summary><div class="maps" id="gm-books"></div></details>
+    </div>
+    <div class="panel stack">
+      <h3>GSTR-2B</h3>
+      <input type="file" id="gf-2b" multiple accept=".xlsx,.xls,.csv" aria-label="GSTR-2B file">
+      <div id="gs-2b" class="note">No file loaded.</div>
+      <details><summary>Column mapping</summary><div class="maps" id="gm-2b"></div></details>
+    </div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <label class="fld">Tolerance (₹ per invoice)<input id="g-tol" type="number" value="2" min="0" step="1" style="width:110px"></label>
+    <button class="btn" id="g-run">Reconcile</button>
+    <button class="btn ghost" id="g-sample">Load example files</button>
+    <button class="btn ghost" id="g-export" hidden>Save as Excel</button>
+  </div>
+  <div id="g-out"></div>
+
+  <h2>GST amount calculator</h2>
+  <p class="hint">Split an amount into taxable value and tax, or add tax on top. Slabs follow GST 2.0 (from 22 Sep 2025): 0%, 5%, 18% and 40%, plus 3% and 0.25% for special goods. The old 12% and 28% slabs no longer exist; confirm the rate for the item or HSN before invoicing.</p>
+  <div class="panel">
+    <div class="row">
+      <label class="fld">Amount (₹)<input id="gc-amt" type="number" value="118000" step="any" style="width:140px"></label>
+      <label class="fld">GST rate<select id="gc-rate"><option>0</option><option>0.25</option><option>3</option><option>5</option><option selected>18</option><option>40</option></select></label>
+      <label class="fld">Amount is<select id="gc-mode"><option value="inc">Inclusive of GST</option><option value="exc">Exclusive of GST</option></select></label>
+      <label class="fld">Supply<select id="gc-sup"><option value="intra">Intra-state (CGST + SGST)</option><option value="inter">Inter-state (IGST)</option></select></label>
+    </div>
+    <div class="tw" style="margin-top:14px"><table id="gc-out"></table></div>
+  </div>
+
+  <h2>Late fee and interest on GST returns</h2>
+  <p class="hint">Late fee under section 47 is per day of delay up to a cap set by turnover. Interest under section 50 is 18% a year on tax paid late. Rates and caps are standard notified figures; check for any waiver or amnesty before quoting a client.</p>
+  <div class="panel">
+    <div class="row">
+      <label class="fld">Return<select id="lf-type">
+        <option value="n">GSTR-3B / GSTR-1 with tax</option>
+        <option value="nil">GSTR-3B / GSTR-1 nil</option></select></label>
+      <label class="fld">Annual turnover<select id="lf-band">
+        <option value="2000">Up to ₹1.5 crore</option>
+        <option value="5000">₹1.5 to ₹5 crore</option>
+        <option value="10000" selected>Above ₹5 crore</option></select></label>
+      <label class="fld">Due date<input id="lf-due" type="date" value="2026-10-20"></label>
+      <label class="fld">Filed / paid on<input id="lf-paid" type="date"></label>
+      <label class="fld">Tax paid late (₹)<input id="lf-tax" type="number" value="50000" step="any" style="width:130px"></label>
+    </div>
+    <div class="tw" style="margin-top:14px"><table id="lf-out"></table></div>
+  </div>
+</section>
+
+
+<section class="tab" id="tab-more" hidden>
+  <h2>GSTR-3B draft</h2>
+  <p class="hint">Enter the month's figures to get a draft liability with ITC set-off (IGST credit used first, then CGST, then SGST). Check against the portal before filing.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Taxable outward, intra-state (₹)<input class="num" id="b3-intra" type="number" value="1000000" style="width:150px"></label>
+    <label class="fld">Taxable outward, inter-state (₹)<input class="num" id="b3-inter" type="number" value="500000" style="width:150px"></label>
+    <label class="fld">Rate %<select id="b3-rate"><option>5</option><option selected>18</option><option>40</option></select></label>
+    <label class="fld">RCM tax payable (₹)<input class="num" id="b3-rcm" type="number" value="0" style="width:120px"></label>
+  </div><div class="row" style="margin-top:10px">
+    <label class="fld">ITC IGST (2B)<input class="num" id="b3-ci" type="number" value="40000" style="width:110px"></label>
+    <label class="fld">ITC CGST (2B)<input class="num" id="b3-cc" type="number" value="60000" style="width:110px"></label>
+    <label class="fld">ITC SGST (2B)<input class="num" id="b3-cs" type="number" value="60000" style="width:110px"></label>
+    <label class="fld">Blocked / reversed ITC (₹, split equally)<input class="num" id="b3-rev" type="number" value="0" style="width:150px"></label>
+    <label class="fld">Fill ITC from GSTR-2B file<input type="file" id="b3-f" accept=".xlsx,.xls,.csv"></label>
+  </div><div id="b3-s" class="note"></div><div class="tw" style="margin-top:14px"><table id="b3-out"></table></div></div>
+
+  <h2>Bulk TDS</h2>
+  <p class="hint">One payment per line: <b>party, amount, PAN</b> (Y or N). Uses the section and rate table from the Tax and TDS tab.</p>
+  <div class="panel stack"><div class="row"><label class="fld">Section<select id="bt-sec"></select></label><label class="fld">Excel / CSV: Party, Amount, PAN<input type="file" id="bt-f" accept=".xlsx,.xls,.csv"></label><button class="btn" id="bt-run">Calculate</button><button class="btn ghost" id="bt-x">Save as Excel</button></div>
+  <textarea id="bt-in" rows="5" aria-label="Payments">Sharma Traders, 85000, Y
+Rao Associates, 120000, Y
+Unknown Vendor, 45000, N</textarea><div class="tw tall"><table id="bt-out"></table></div></div>
+
+  <h2>Bank reconciliation</h2>
+  <p class="hint">Paste lines as <b>date, narration, amount</b> (receipts positive, payments negative). Entries match on equal amount within the date window.</p>
+  <div class="panel stack"><div class="grid"><label class="fld">Cash book<textarea id="br-b" rows="5">01/11/2026, Cheque to Rao, -25000
+03/11/2026, Receipt Sharma, 60000
+05/11/2026, Rent, -18000</textarea></label>
+  <label class="fld">Bank statement<textarea id="br-s" rows="5">02/11/2026, CHQ 4412, -25000
+03/11/2026, NEFT Sharma, 60000
+06/11/2026, Bank charges, -354</textarea></label></div>
+  <div class="row"><label class="fld">Cash book file<input type="file" id="br-fb" accept=".xlsx,.xls,.csv"></label><label class="fld">Bank statement file<input type="file" id="br-fs" accept=".xlsx,.xls,.csv"></label><button class="btn ghost" id="br-use">Use statement from Bank to Tally tab</button></div>
+  <p class="note" style="margin:0">Files need Date, Narration and Withdrawal/Payment and Deposit/Receipt columns. They fill the boxes above, so you can edit before reconciling.</p>
+  <div class="row"><label class="fld">Date window (days)<input class="num" id="br-d" type="number" value="5" style="width:100px"></label><label class="fld">Bank ledger in Tally<input id="br-bl" value="Bank A/c" style="width:150px"></label><button class="btn" id="br-run">Reconcile</button><button class="btn ghost" id="br-tx">Export missing bank entries to Tally</button></div><div id="br-out"></div></div>
+
+  <h2>Books checks</h2>
+  <p class="hint">Paste a trial balance as <b>ledger, debit, credit</b>. Flags an unequal total, cash with a credit balance, suspense balances, duplicate ledgers and ledgers carrying both sides.</p>
+  <div class="panel stack"><label class="fld">Excel / CSV trial balance (Ledger, Debit, Credit)<input type="file" id="bk-f" accept=".xlsx,.xls,.csv"></label><textarea id="bk-in" rows="6">Cash, 0, 12000
+Sundry Debtors, 450000, 0
+Suspense A/c, 8000, 0
+Sales, 0, 900000
+Purchases, 600000, 0
+Capital, 0, 150000</textarea><div class="row"><button class="btn" id="bk-run">Run checks</button></div><div id="bk-out"></div></div>
+
+  <h2>Depreciation</h2>
+  <p class="hint">Written down value or straight line. For income tax, half the rate applies when the asset is used for under 180 days in the year of purchase.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Cost (₹)<input class="num" id="dp-c" type="number" value="500000" style="width:120px"></label>
+    <label class="fld">Rate % a year<input class="num" id="dp-r" type="number" value="15" style="width:90px"></label>
+    <label class="fld">Method<select id="dp-m"><option value="wdv">WDV</option><option value="slm">Straight line</option></select></label>
+    <label class="fld">Years<input class="num" id="dp-y" type="number" value="5" min="1" max="30" style="width:80px"></label>
+    <label class="fld">Residual (₹)<input class="num" id="dp-s" type="number" value="0" style="width:100px"></label>
+    <label class="fld">Used under 180 days in year 1<select id="dp-h"><option value="0">No</option><option value="1">Yes (half rate)</option></select></label>
+  </div><div class="tw tall" style="margin-top:14px"><table id="dp-out"></table></div>
+  <h3 style="margin-top:18px">Asset register (one year, method above)</h3><div class="row"><label class="fld">Excel / CSV: Asset, Cost or opening WDV, Rate %<input type="file" id="dp-f" accept=".xlsx,.xls,.csv"></label></div><div class="tw tall" style="margin-top:10px"><table id="dp-tb"></table></div></div>
+
+  <h2>Interest calculator</h2>
+  <div class="panel"><div class="row">
+    <label class="fld">Principal (₹)<input class="num" id="in-p" type="number" value="100000" style="width:120px"></label>
+    <label class="fld">Rate % a year<input class="num" id="in-r" type="number" value="12" style="width:90px"></label>
+    <label class="fld">From<input id="in-a" type="date" value="2026-04-01"></label>
+    <label class="fld">To<input id="in-b" type="date" value="2026-11-11"></label>
+    <label class="fld">Type<select id="in-t"><option value="s">Simple</option><option value="m">Compound monthly</option><option value="q">Compound quarterly</option><option value="y">Compound yearly</option></select></label>
+  </div><div class="tw" style="margin-top:14px"><table id="in-out"></table></div></div>
+
+    <h2>GSTR-1 summary</h2>
+  <p class="hint">One sale per line: <b>buyer GSTIN (blank for consumers), invoice, taxable value, rate %</b>, and optionally <b>I</b> in a fifth field for an inter-state consumer sale. Splits B2B and B2C and works out CGST, SGST and IGST by rate.</p>
+  <div class="panel stack"><div class="row"><label class="fld">Your state code<input class="num" id="g1-st" value="29" style="width:80px"></label><button class="btn" id="g1-run">Summarise</button></div>
+  <textarea id="g1-in" rows="5" aria-label="Sales">29ABCDE1234F1Z5, INV-001, 100000, 18
+07AAFCD2211Q1Z8, INV-002, 250000, 18
+, INV-003, 8000, 5
+, INV-004, 300000, 18, I</textarea><div class="tw"><table id="g1-out"></table></div></div>
+
+  <h2>TDS deducted vs deposited</h2>
+  <p class="hint">Deposit is due by the 7th of the next month (30 April for March). Enter deductions as <b>date, section, TDS amount</b> and challans as <b>date, challan no, amount</b>. Late deposit interest is 1.5% a month on the unpaid or late amount, part of a month counting as a month.</p>
+  <div class="panel stack"><div class="grid"><label class="fld">Deducted<textarea id="tm-d" rows="4">15/10/2026, 194C, 12000
+28/10/2026, 194J, 8000
+12/11/2026, 194C, 5000</textarea></label><label class="fld">Deposited<textarea id="tm-p" rows="4">06/11/2026, 0510001, 20000
+15/12/2026, 0510002, 3000</textarea></label></div><div class="row"><button class="btn" id="tm-run">Match</button></div><div class="tw"><table id="tm-out"></table></div></div>
+
+  <h2>Depreciation on sale of a block</h2>
+  <p class="hint">Income tax block of assets. Sale proceeds above the block value give a short-term gain; a block that ends with a balance gives a short-term loss; otherwise depreciation runs on the reduced value, at half rate for assets used under 180 days.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Opening WDV<input class="num" id="bs-o" type="number" value="800000" style="width:120px"></label>
+    <label class="fld">Added, used 180+ days<input class="num" id="bs-a" type="number" value="100000" style="width:120px"></label>
+    <label class="fld">Added, used under 180 days<input class="num" id="bs-h" type="number" value="50000" style="width:120px"></label>
+    <label class="fld">Sale proceeds<input class="num" id="bs-s" type="number" value="200000" style="width:120px"></label>
+    <label class="fld">Rate %<input class="num" id="bs-r" type="number" value="15" style="width:80px"></label>
+    <label class="fld">Assets left in block<select id="bs-l"><option value="1">Yes</option><option value="0">No, block ceases</option></select></label>
+  </div><div class="tw" style="margin-top:14px"><table id="bs-out"></table></div></div>
+
+  <h2>Interest under 234A, 234B and 234C</h2>
+  <p class="hint">Simplified for an individual with no special-rate income. Enter tax after TDS and the advance tax paid in total by each date.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Tax after TDS<input class="num" id="ia-t" type="number" value="200000" style="width:120px"></label>
+    <label class="fld">Paid by 15 Jun<input class="num" id="ia-1" type="number" value="0" style="width:110px"></label>
+    <label class="fld">Paid by 15 Sep<input class="num" id="ia-2" type="number" value="60000" style="width:110px"></label>
+    <label class="fld">Paid by 15 Dec<input class="num" id="ia-3" type="number" value="100000" style="width:110px"></label>
+    <label class="fld">Paid by 31 Mar<input class="num" id="ia-4" type="number" value="140000" style="width:110px"></label>
+  </div><div class="row" style="margin-top:10px">
+    <label class="fld">Assessment year starts (1 April)<input class="num" id="ia-y" type="number" value="2026" style="width:90px"></label>
+    <label class="fld">Return due date<input id="ia-d" type="date" value="2026-07-31"></label>
+    <label class="fld">Return filed on<input id="ia-f" type="date" value="2026-11-11"></label>
+    <label class="fld">Tax paid with return (₹)<input class="num" id="ia-sa" type="number" value="60000" style="width:120px"></label>
+  </div><div class="tw" style="margin-top:14px"><table id="ia-out"></table></div></div>
+
+  <h2>Number to words</h2>
+  <div class="panel"><div class="row"><label class="fld">Amount (₹)<input class="num" id="nw-a" type="number" value="1234567.5" step="any" style="width:160px"></label></div><p id="nw-o" style="margin:12px 0 0;font-weight:500"></p></div>
+
+  <h2>Client reminder</h2>
+  <p class="hint">Builds a message you can copy or send on WhatsApp.</p>
+  <div class="panel stack"><div class="row">
+    <label class="fld">Client<input id="rm-c" value="Mr. Sharma" style="width:170px"></label>
+    <label class="fld">Filing<select id="rm-f"></select></label>
+    <label class="fld">Due date<input id="rm-d" type="date" value="2026-11-20"></label>
+    <label class="fld">Documents needed<input id="rm-x" value="sales and purchase invoices" style="width:230px"></label>
+  </div><textarea id="rm-o" rows="6"></textarea><div class="row"><button class="btn" id="rm-cp">Copy</button><button class="btn ghost" id="rm-wa">Open WhatsApp</button></div></div>
+
+    <h2>GST invoice generator</h2>
+  <p class="hint">One item per line: <b>description, HSN/SAC, quantity, rate, GST %</b>. Splits CGST/SGST or IGST by comparing your state with the place of supply. Use Print / PDF to save it.</p>
+  <div class="panel stack"><div class="row">
+    <label class="fld">Your GSTIN<input id="iv-g" style="width:170px"></label>
+    <label class="fld">Invoice no.<input id="iv-no" value="MC/001" style="width:100px"></label>
+    <label class="fld">Date<input id="iv-dt" type="date"></label>
+    <label class="fld">Buyer name<input id="iv-bn" value="Client name" style="width:170px"></label>
+    <label class="fld">Buyer GSTIN<input id="iv-bg" style="width:170px"></label>
+    <label class="fld">Place of supply (state code)<input class="num" id="iv-pos" value="29" style="width:90px"></label>
+  </div><textarea id="iv-in" rows="3">GST return filing services, 9982, 1, 5000, 18
+Accounting services, 9982, 1, 8000, 18</textarea>
+  <div class="row"><button class="btn" id="iv-run">Prepare invoice</button><button class="btn ghost" id="iv-add">Add to GSTR-1 list</button></div><div id="iv-out"></div></div>
+
+  <h2>Portal JSON export</h2>
+  <p class="hint">Builds GSTR-1 (from the GSTR-1 summary box) and GSTR-3B (from the GSTR-3B draft figures) as JSON. This follows the commonly used offline-tool layout; always import it into the GST offline tool or portal and check it before filing. GSTR-1 lines may take a sixth field, the invoice date (dd/mm/yyyy).</p>
+  <div class="panel"><div class="row"><label class="fld">Your GSTIN<input id="pj-g" style="width:170px"></label><label class="fld">Return month<input id="pj-p" type="month" value="2026-10"></label><button class="btn" id="pj-1">Save GSTR-1 JSON</button><button class="btn" id="pj-3">Save GSTR-3B JSON</button></div><p class="note" id="pj-n"></p></div>
+
+    <h2>GSTR-2B vs books: full-year summary</h2>
+  <p class="hint">On the GST tab you can now choose several files at once (for example twelve monthly GSTR-2B sheets). After reconciling there, summarise the result by month and by supplier here.</p>
+  <div class="panel stack"><div class="row"><button class="btn" id="ms-run">Summarise reconciliation</button></div><div class="grid"><div class="tw tall"><table id="ms-m"></table></div><div class="tw tall"><table id="ms-s"></table></div></div></div>
+
+  <h2>26AS / AIS vs books (TDS)</h2>
+  <p class="hint">Paste lines as <b>TAN or deductor name, amount credited, TDS</b>. Match what your books show as TDS receivable against Form 26AS or AIS, and claim only what appears in 26AS.</p>
+  <div class="panel stack"><div class="grid"><label class="fld">Form 26AS / AIS<textarea id="ta-a" rows="4">BLRA12345B, 500000, 50000
+Rao Associates, 200000, 4000</textarea></label><label class="fld">Books<textarea id="ta-b" rows="4">BLRA12345B, 500000, 50000
+Rao Associates, 200000, 6000
+Kumar Traders, 100000, 1000</textarea></label></div><div class="row"><button class="btn" id="ta-run">Match</button></div><div class="tw"><table id="ta-out"></table></div></div>
+
+  <h2>TDS return working (24Q / 26Q)</h2>
+  <p class="hint">One line per deduction: <b>deductee, PAN, section, payment date, amount paid, TDS deducted, deposit date</b> (leave the last blank if not deposited). Groups by quarter, shows the filing due date and flags missing PAN, short deduction and late deposit. This is a working for checking; prepare the actual return in the NSDL/TIN utility.</p>
+  <div class="panel stack"><div class="row"><label class="fld">Form<select id="rq-f"><option>26Q (non-salary)</option><option>24Q (salary)</option></select></label><button class="btn" id="rq-run">Prepare working</button><button class="btn ghost" id="rq-x">Save as Excel</button></div>
+  <textarea id="rq-in" rows="5">Sharma Traders, ABCDE1234F, 194C, 15/10/2026, 85000, 850, 06/11/2026
+Rao Associates, , 194J, 28/10/2026, 120000, 12000, 06/11/2026
+Kumar and Sons, KLMNO5678P, 194C, 05/07/2026, 90000, 900,</textarea><div class="tw"><table id="rq-q"></table></div><div class="tw"><table id="rq-f2"></table></div></div>
+
+  <h2>Full income tax computation</h2>
+  <p class="hint">Individual. Compares both regimes after standard deduction and deductions, adds tax on capital gains at special rates, and plans advance tax. Capital gains rates and exemption are editable below; they are applied without surcharge or basic-exemption adjustment, so treat the result as an estimate.</p>
+  <div class="panel stack"><div class="row">
+    <label class="fld">Age<select id="ft-age"><option value="">Under 60</option><option value="s60">60 to 79</option><option value="s80">80 and above</option></select></label>
+    <label class="fld">Salary (gross)<input class="num" id="ft-sal" type="number" value="1500000" style="width:120px"></label>
+    <label class="fld">House property (net, loss as minus)<input class="num" id="ft-hp" type="number" value="0" style="width:120px"></label>
+    <label class="fld">Business or profession<input class="num" id="ft-bus" type="number" value="0" style="width:120px"></label>
+    <label class="fld">Other sources<input class="num" id="ft-oth" type="number" value="30000" style="width:110px"></label></div>
+  <div class="row"><label class="fld">STCG (111A)<input class="num" id="ft-st" type="number" value="0" style="width:110px"></label>
+    <label class="fld">LTCG (112A)<input class="num" id="ft-lt" type="number" value="0" style="width:110px"></label>
+    <label class="fld">STCG rate %<input class="num" id="ft-r1" type="number" value="20" style="width:70px"></label>
+    <label class="fld">LTCG rate %<input class="num" id="ft-r2" type="number" value="12.5" style="width:70px"></label>
+    <label class="fld">LTCG exemption<input class="num" id="ft-ex" type="number" value="125000" style="width:100px"></label></div>
+  <div class="row"><label class="fld">80C (max 1,50,000)<input class="num" id="ft-c" type="number" value="150000" style="width:110px"></label>
+    <label class="fld">80D<input class="num" id="ft-d" type="number" value="25000" style="width:100px"></label>
+    <label class="fld">Other deductions (old regime)<input class="num" id="ft-v" type="number" value="50000" style="width:110px"></label>
+    <label class="fld">TDS and TCS credit<input class="num" id="ft-t" type="number" value="120000" style="width:110px"></label>
+    <label class="fld">Advance tax already paid<input class="num" id="ft-a" type="number" value="0" style="width:110px"></label>
+    <label class="fld">Financial year starts<input class="num" id="ft-y" type="number" value="2026" style="width:80px"></label></div>
+  <div class="tw"><table id="ft-out"></table></div><div id="ft-adv"></div></div>
+
+  <h2>Validators</h2>
+  <p class="hint">Format checks only, and the GSTIN check digit. They do not confirm the number is registered or active.</p>
+  <div class="panel"><div class="row">
+    <label class="fld">Type<select id="v-t"><option>GSTIN</option><option>PAN</option><option>TAN</option><option>IFSC</option><option>Mobile</option></select></label>
+    <label class="fld">Values, one per line<textarea id="v-in" rows="4" style="width:280px">29ABCDE1234F1Z5
+07AAFCD2211Q1Z8</textarea></label></div><div class="tw" style="margin-top:14px"><table id="v-out"></table></div></div>
+</section>
+
+<!-- ============ BANK TO TALLY ============ -->
+<section class="tab" id="tab-bank" hidden>
+  <h2>Bank statement to Tally vouchers</h2>
+  <p class="hint">Upload a bank statement as Excel or CSV. Narrations are matched to ledgers by keyword, you can correct any row, and the result exports as Tally voucher XML. Withdrawals become Payment vouchers and deposits become Receipt vouchers.</p>
+  <div class="grid">
+    <div class="panel stack">
+      <h3>Statement</h3>
+      <input type="file" id="bf" accept=".xlsx,.xls,.csv" aria-label="Bank statement file">
+      <div id="bs" class="note">No file loaded.</div>
+      <details><summary>Column mapping</summary><div class="maps" id="bm"></div></details>
+      <button class="btn ghost" id="b-sample" style="align-self:flex-start">Load example statement</button>
+    </div>
+    <div class="panel stack">
+      <h3>Tally settings</h3>
+      <label class="fld">Company name in Tally (exactly as shown)<input id="b-comp" type="text" placeholder="M/s Maljai And Co"></label>
+      <label class="fld">Bank ledger name<input id="b-bank" type="text" value="HDFC Bank"></label>
+      <div class="row">
+        <label class="fld">Unmatched payments to<input id="b-sp" type="text" value="Suspense A/c"></label>
+        <label class="fld">Unmatched receipts to<input id="b-sr" type="text" value="Suspense A/c"></label>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:22px">Ledger rules</h3>
+  <p class="hint" style="margin-bottom:8px">First rule whose keyword appears in the narration wins. Rules are remembered in this browser.</p>
+  <div class="panel">
+    <div class="row">
+      <label class="fld">Keyword<input id="r-k" type="text" placeholder="e.g. ZOMATO" style="width:180px"></label>
+      <label class="fld">Ledger<input id="r-l" type="text" placeholder="e.g. Staff Welfare" style="width:200px"></label>
+      <button class="btn" id="r-add">Add rule</button>
+      <button class="btn ghost" id="b-apply">Re-apply rules</button>
+    </div>
+    <div id="r-list" class="tw" style="margin-top:12px"></div>
+  </div>
+
+  <div id="b-out"></div>
+</section>
+
+<!-- ============ TRACKER ============ -->
+<section class="tab" id="tab-tracker" hidden>
+  <h2>Compliance tracker</h2>
+  <p class="hint">Pick the filings each client needs. The month view lists every due date, lets you tick them off, and flags what is overdue. Dates are the standard statutory dates; check for CBDT or CBIC extensions before telling a client.</p>
+  <div class="row">
+    <label class="fld">Month<input id="t-month" type="month"></label>
+    <label class="fld">Client<select id="t-client"><option value="">All clients</option></select></label>
+    <label class="fld">Show<select id="t-show"><option value="all">All</option><option value="pending">Pending only</option><option value="overdue">Overdue only</option></select></label>
+  </div>
+  <div class="stats" id="t-stats"></div>
+  <div class="tw tall" id="t-list"></div>
+
+  <h2>Clients</h2>
+  <div id="t-banner"></div>
+  <div class="panel">
+    <h3 id="cl-title">Add client</h3>
+    <div class="row">
+      <label class="fld">Client name<input id="cl-name" type="text" style="width:240px"></label>
+      <label class="fld">GSTIN (optional)<input id="cl-gstin" type="text" style="width:190px"></label>
+    </div>
+    <div id="cl-checks"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="cl-save">Save client</button>
+      <button class="btn ghost" id="cl-cancel" hidden>Cancel edit</button>
+    </div>
+  </div>
+  <div class="tw" id="cl-list" style="margin-top:14px"></div>
+  <div class="row" style="margin-top:14px">
+    <button class="btn ghost" id="t-export">Save backup</button>
+    <label class="fld">Restore backup<input type="file" id="t-import" accept=".json"></label>
+  </div>
+  <p class="note">Clients and ticks are saved online for the whole team.</p>
+</section>
+
+<!-- ============ TAX ============ -->
+<section class="tab" id="tab-tax" hidden>
+  <h2>Income tax, old vs new regime (FY 2026-27)</h2>
+  <p class="hint">Individuals. Slabs are unchanged from FY 2025-26. Special-rate income such as capital gains is not included here.</p>
+  <div class="panel">
+    <div class="row">
+      <label class="fld">Income before deductions (₹)<input id="it-inc" type="number" value="1450000" step="any" style="width:170px"></label>
+      <label class="fld">Chapter VI-A and other deductions, old regime only (₹)<input id="it-ded" type="number" value="200000" step="any" style="width:200px"></label>
+      <label class="fld">Age<select id="it-age"><option value="u60">Below 60</option><option value="s60">60 to 79</option><option value="s80">80 and above</option></select></label>
+      <label class="fld" style="flex-direction:row;align-items:center;gap:8px;padding-bottom:8px"><input type="checkbox" id="it-sal" checked> Salary or pension (standard deduction)</label>
+    </div>
+    <div class="tw" style="margin-top:14px"><table id="it-out"></table></div>
+    <div id="it-adv"></div>
+    <p class="note">New regime: standard deduction ₹75,000, rebate up to ₹60,000 for taxable income up to ₹12 lakh with marginal relief just above it, surcharge capped at 25%. Old regime: standard deduction ₹50,000, rebate up to ₹12,500 for taxable income up to ₹5 lakh, surcharge up to 37%. Cess 4%. Surcharge marginal relief is applied.</p>
+  </div>
+
+  <h2>TDS calculator</h2>
+  <p class="hint">Rates and thresholds for payments to residents from 1 April 2026. Sections are shown by their familiar numbers; the Income-tax Act, 2025 files them under section 393 with payment codes.</p>
+  <div class="panel">
+    <div class="row">
+      <label class="fld">Nature of payment<select id="td-sec" style="width:min(100%,380px)"></select></label>
+      <label class="fld" id="td-optw">Payee<select id="td-opt"></select></label>
+      <label class="fld">This payment (₹)<input id="td-amt" type="number" value="85000" step="any" style="width:140px"></label>
+      <label class="fld">Total paid to payee this year, incl. this (₹)<input id="td-tot" type="number" value="85000" step="any" style="width:190px"></label>
+      <label class="fld" style="flex-direction:row;align-items:center;gap:8px;padding-bottom:8px"><input type="checkbox" id="td-pan" checked> PAN available</label>
+    </div>
+    <div class="tw" style="margin-top:14px"><table id="td-out"></table></div>
+  </div>
+
+  <h2>TDS interest and late filing fee</h2>
+  <div class="grid">
+    <div class="panel stack">
+      <h3>Interest on late deduction or deposit</h3>
+      <div class="row">
+        <label class="fld">Case<select id="ti-case"><option value="ded">Deducted late (1% a month)</option><option value="dep">Deducted, deposited late (1.5% a month)</option></select></label>
+        <label class="fld">TDS amount (₹)<input id="ti-amt" type="number" value="10000" step="any" style="width:120px"></label>
+      </div>
+      <div class="row">
+        <label class="fld" id="ti-l1">Date it should have been deducted<input id="ti-d1" type="date" value="2026-08-10"></label>
+        <label class="fld" id="ti-l2">Date actually deducted<input id="ti-d2" type="date" value="2026-10-15"></label>
+      </div>
+      <div class="tw"><table id="ti-out"></table></div>
+    </div>
+    <div class="panel stack">
+      <h3>Late fee for TDS return (234E)</h3>
+      <div class="row">
+        <label class="fld">Due date of return<input id="lf2-due" type="date" value="2026-07-31"></label>
+        <label class="fld">Filed on<input id="lf2-paid" type="date" value="2026-09-12"></label>
+        <label class="fld">TDS in the return (₹)<input id="lf2-tds" type="number" value="30000" step="any" style="width:130px"></label>
+      </div>
+      <div class="tw"><table id="lf2-out"></table></div>
+      <p class="note">₹200 for every day of delay, limited to the TDS in the return.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DUE-DATE CALENDAR (new) ============ -->
+<section class="tab" id="tab-calendar" hidden>
+  <h2>Due-date calendar</h2>
+  <p class="hint">Every filing for every client, laid out by date. Assign each filing to a team member, tick it off, and send reminders to the client or the staff member on WhatsApp or email with one click. Filings come from the clients and filings you pick in the Compliance tracker.</p>
+  <div class="row no-print">
+    <button class="btn ghost small" id="cal-prev" aria-label="Previous month">&larr;</button>
+    <label class="fld">Month<input id="cal-month" type="month"></label>
+    <button class="btn ghost small" id="cal-next" aria-label="Next month">&rarr;</button>
+    <label class="fld">Assigned to<select id="cal-who"><option value="">Everyone</option><option value="__me">Only me</option><option value="__none">Not assigned</option></select></label>
+    <label class="fld">Type<select id="cal-grp"><option value="">All types</option></select></label>
+    <label class="fld">Show<select id="cal-show"><option value="pending">Pending only</option><option value="all">All</option><option value="overdue">Overdue only</option></select></label>
+  </div>
+  <div class="stats" id="cal-stats"></div>
+  <div class="cal-grid" id="cal-grid" aria-label="Month calendar"></div>
+
+  <h2>Filings this month</h2>
+  <p class="hint">"Client" opens WhatsApp with a ready message to the client's mobile from the Client master. "Staff" sends the task to the person it is assigned to. Messages open in your own WhatsApp or email, so nothing is sent without you pressing Send.</p>
+  <div class="row no-print" style="margin-bottom:10px">
+    <button class="btn small" id="cal-digest">WhatsApp each staff member their week</button>
+    <button class="btn ghost small" id="cal-ics">Add this month to Google / Outlook calendar (.ics)</button>
+    <button class="btn ghost small" id="cal-ics-y">Whole financial year (.ics)</button>
+  </div>
+  <div class="tw tall" id="cal-list"></div>
+
+  <h2>Set up filings automatically</h2>
+  <div class="panel stack">
+    <p class="note" style="margin:0">Adds every client from the Client master to the Compliance tracker with the usual filings for their type, read from the PAN and GSTIN: a company (4th letter C) gets ROC forms and audit ITR, a firm or LLP (F) gets audit ITR and LLP forms, an individual (P) gets the non-audit ITR, and any client with a GSTIN gets monthly GSTR-1 and 3B. Clients already in the tracker are left as they are. You can edit each one afterwards.</p>
+    <div class="row"><button class="btn" id="cal-auto">Add Client master clients to the tracker</button><span class="sub" id="cal-auto-n"></span></div>
+  </div>
+
+  <details><summary>Message templates</summary>
+    <div class="panel stack" style="margin-top:10px">
+      <p class="note" style="margin:0">Use {client}, {filing}, {period}, {due}, {docs}, {firm} and {staff}. Saved for the whole firm.</p>
+      <label class="fld">Client reminder<textarea id="cal-tpl-c" rows="4"></textarea></label>
+      <label class="fld">Staff task<textarea id="cal-tpl-s" rows="3"></textarea></label>
+      <div class="row"><button class="btn small" id="cal-tpl-save">Save templates</button><button class="btn ghost small" id="cal-tpl-reset">Reset to default</button></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ TEAM (new) ============ -->
+<section class="tab" id="tab-team" hidden>
+  <h2>Team and logins</h2>
+  <p class="hint">Each person signs in with their own email and password. <b>Partner</b> sees everything and manages the team. <b>Staff</b> uses every tool and sees fees. <b>Article</b> uses every tool but does not see fees, rates and settings, or backup.</p>
+  <div id="team-body"></div>
+</section>
+
+<!-- ============ BILLING (new) ============ -->
+<section class="tab" id="tab-billing" hidden>
+  <h2>Fee invoices and outstanding</h2>
+  <p class="hint">Raise GST invoices for your fees, record payments (including TDS the client deducted), and follow up on what is outstanding. Invoice numbers run in a series per financial year.</p>
+  <div class="stats" id="bl-stats"></div>
+  <div class="row no-print" style="margin-bottom:12px"><button class="btn" id="bl-new">New invoice</button><button class="btn ghost" id="bl-xlsx">Save register as Excel</button>
+    <label class="fld">Show<select id="bl-show"><option value="open">Unpaid and part paid</option><option value="all">All invoices</option><option value="paid">Paid</option></select></label>
+    <label class="fld">Client<input id="bl-fc" list="as-cl" placeholder="All clients" style="width:180px"></label></div>
+  <div id="bl-form"></div>
+  <div class="tw tall" id="bl-list"></div>
+  <h2>Outstanding by client</h2>
+  <div class="tw" id="bl-age"></div>
+  <details style="margin-top:18px"><summary>Firm details used on invoices</summary><div class="panel" style="margin-top:10px" id="bl-firm"></div></details>
+</section>
+
+<!-- ============ TIME AND WORK (new) ============ -->
+<section class="tab" id="tab-work" hidden>
+  <h2>Time and work</h2>
+  <p class="hint">Record time on each client with the timer or by hand. Partners see who is working on what, what is overdue, and how the time compares with the fees billed.</p>
+  <div class="grid">
+    <div class="panel stack" id="wk-timer"></div>
+    <div class="panel stack" id="wk-manual"></div>
+  </div>
+  <h2>My time</h2>
+  <div class="tw" id="wk-mine"></div>
+  <div id="wk-dash"></div>
+</section>
+
+<!-- ============ DOCUMENT INBOX (new) ============ -->
+<section class="tab" id="tab-inbox" hidden>
+  <h2>Client document inbox</h2>
+  <p class="hint">Give each client a private upload link. They open it on their phone or computer, pick files (bills, bank statements, Form 16) and press Upload; no login needed. The files arrive here for the whole team.</p>
+  <div id="ib-body"></div>
+</section>
+
+</div>
+<div id="toast" hidden></div>
+<div id="gate" class="gate" hidden></div>
+<div id="live" class="live" hidden></div>
+
+<script src="lib/xlsx.full.min.js"></script>
+<script src="lib/supabase.js"></script>
+<script src="config.js"></script>
+<script src="js/extras.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/store.js"></script>
+<script src="js/team.js"></script>
+<script src="js/billing.js"></script>
+<script src="js/work.js"></script>
+<script src="js/inbox.js"></script>
+<script src="js/gst-plus.js"></script>
+<script src="js/bank-plus.js"></script>
+<script src="js/cloud.js"></script>
+<script type="text/plain" id="app-src">
+//#logic-start
+const num=v=>{if(typeof v==='number')return isFinite(v)?v:0;if(v==null)return 0;let s=String(v).trim();const neg=/^\(.*\)$/.test(s)||/dr$/i.test(s)&&false;s=s.replace(/[,₹\s()]/g,'').replace(/(cr|dr)$/i,'');const x=parseFloat(s);return isNaN(x)?0:(neg?-Math.abs(x):x);};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=n=>(isFinite(n)?n:0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const inr0=n=>Math.round(isFinite(n)?n:0).toLocaleString('en-IN');
+const MON='jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
+function parseDate(v){
+  if(v instanceof Date&&!isNaN(v))return new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  if(typeof v==='number'&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*86400000));return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());}
+  const s=String(v==null?'':v).trim();if(!s)return null;
+  let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){let y=+m[3];if(y<100)y+=2000;return new Date(y,+m[2]-1,+m[1]);}
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})[\s\-]([A-Za-z]{3})[a-z]*[\s\-,]+(\d{2,4})/);
+  if(m){const mo=MON.indexOf(m[2].toLowerCase());if(mo>=0){let y=+m[3];if(y<100)y+=2000;return new Date(y,mo,+m[1]);}}
+  return null;
+}
+const fmtD=d=>d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear():'';
+const ymd=d=>d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+const daysBetween=(a,b)=>Math.round((Date.UTC(b.getFullYear(),b.getMonth(),b.getDate())-Date.UTC(a.getFullYear(),a.getMonth(),a.getDate()))/86400000);
+
+/* ---- column detection ---- */
+const GST_FIELDS=[
+ {key:'gstin',label:'Supplier GSTIN',re:/gstin|ctin/i},
+ {key:'inv',label:'Invoice number',re:/invoice\s*(no|num)|inv\.?\s*(no|num)|bill\s*no|document\s*(no|num)/i},
+ {key:'date',label:'Invoice date',re:/date/i},
+ {key:'taxable',label:'Taxable value',re:/taxable/i},
+ {key:'igst',label:'IGST',re:/igst|integrated\s*tax/i},
+ {key:'cgst',label:'CGST',re:/cgst|central\s*tax/i},
+ {key:'sgst',label:'SGST / UTGST',re:/sgst|utgst|state.{0,3}ut\s*tax|state\s*tax/i}];
+const BANK_FIELDS=[
+ {key:'date',label:'Date',re:/^(txn|transaction|tran|value|posting)?\s*date/i},
+ {key:'narr',label:'Narration',re:/narration|description|particulars|remarks|details/i},
+ {key:'ref',label:'Cheque / ref no',re:/chq|cheque|ref/i},
+ {key:'dr',label:'Withdrawal (debit)',re:/withdraw|debit|\bdr\b/i},
+ {key:'cr',label:'Deposit (credit)',re:/deposit|credit|\bcr\b/i}];
+function findHeader(rows,fields){
+  let best=0,bs=-1;
+  for(let i=0;i<Math.min(rows.length,40);i++){
+    const cells=(rows[i]||[]).map(c=>String(c));
+    const sc=fields.filter(f=>cells.some(c=>f.re.test(c))).length;
+    if(sc>bs){bs=sc;best=i;}
+  }
+  return best;
+}
+function guessMap(headers,fields){
+  const m={};
+  fields.forEach(f=>{m[f.key]=headers.findIndex((h,i)=>f.re.test(String(h))&&!Object.values(m).includes(i));});
+  return m;
+}
+
+/* ---- GST reconciliation ---- */
+const normInv=s=>String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^0+/,'');
+function aggregate(d){
+  const out=new Map(),g=i=>i<0?'':null;
+  const cell=(r,k)=>d.map[k]>=0?r[d.map[k]]:'';
+  d.rows.forEach(r=>{
+    const gstin=String(cell(r,'gstin')).trim().toUpperCase(),inv=String(cell(r,'inv')).trim();
+    if(!gstin||!inv)return;
+    const it={gstin,inv,date:parseDate(cell(r,'date')),taxable:num(cell(r,'taxable')),igst:num(cell(r,'igst')),cgst:num(cell(r,'cgst')),sgst:num(cell(r,'sgst'))};
+    it.tax=it.igst+it.cgst+it.sgst;
+    const k=gstin+'|'+normInv(inv),e=out.get(k);
+    if(e){['taxable','igst','cgst','sgst','tax'].forEach(f=>e[f]+=it[f]);}else out.set(k,it);
+  });
+  return out;
+}
+function reconcile(books,g2b,tol){
+  const B=aggregate(books),G=aggregate(g2b),rows=[];
+  for(const [k,b] of B){
+    const g=G.get(k);
+    if(g){const diff=b.tax-g.tax;rows.push({status:Math.abs(diff)<=tol?'matched':'differs',gstin:b.gstin,inv:b.inv,date:b.date,bTaxable:b.taxable,bTax:b.tax,gTaxable:g.taxable,gTax:g.tax,diff});}
+    else rows.push({status:'notin2b',gstin:b.gstin,inv:b.inv,date:b.date,bTaxable:b.taxable,bTax:b.tax,gTaxable:0,gTax:0,diff:b.tax});
+  }
+  for(const [k,g] of G){if(!B.has(k))rows.push({status:'notinbooks',gstin:g.gstin,inv:g.inv,date:g.date,bTaxable:0,bTax:0,gTaxable:g.taxable,gTax:g.tax,diff:-g.tax});}
+  return rows;
+}
+function gstSplit(amt,rate,inclusive){
+  const base=inclusive?amt/(1+rate/100):amt,tax=base*rate/100;
+  return {base,tax,total:base+tax};
+}
+function lateFee(type,cap,days,tax){
+  const perDay=type==='nil'?20:50,capv=type==='nil'?500:+cap;
+  const fee=Math.min(days*perDay,capv),interest=type==='nil'?0:tax*0.18*days/365;
+  return {days,perDay,cap:capv,fee,interest,total:fee+interest};
+}
+
+/* ---- income tax ---- */
+const NEW_SLABS=[[400000,0],[800000,.05],[1200000,.10],[1600000,.15],[2000000,.20],[2400000,.25],[Infinity,.30]];
+function oldSlabs(age){const ex=age==='s80'?500000:age==='s60'?300000:250000;return [[ex,0],[500000,.05],[1000000,.20],[Infinity,.30]];}
+function slabTax(inc,slabs){let prev=0,t=0;for(const [lim,r] of slabs){if(inc>prev)t+=(Math.min(inc,lim)-prev)*r;prev=lim;if(inc<=lim)break;}return t;}
+function calcRegime(reg,ti,age){
+  ti=Math.max(0,ti);
+  const slabs=reg==='new'?NEW_SLABS:oldSlabs(age);
+  const tax=slabTax(ti,slabs);let rebate=0;
+  if(reg==='new'){if(ti<=1200000)rebate=Math.min(tax,60000);else if(tax>ti-1200000)rebate=tax-(ti-1200000);}
+  else if(ti<=500000)rebate=Math.min(tax,12500);
+  const after=tax-rebate;
+  const th=reg==='new'?[[5e6,.10],[1e7,.15],[2e7,.25]]:[[5e6,.10],[1e7,.15],[2e7,.25],[5e7,.37]];
+  let total=after,sc=0;
+  for(let i=th.length-1;i>=0;i--){
+    if(ti>th[i][0]){
+      const r=th[i][1],rl=i>0?th[i-1][1]:0;
+      total=after*(1+r);
+      const cap=slabTax(th[i][0],slabs)*(1+rl)+(ti-th[i][0]);
+      if(total>cap)total=cap;
+      sc=total-after;break;
+    }
+  }
+  const cess=total*0.04;
+  return {ti,tax,rebate,surcharge:sc,cess,total:total+cess};
+}
+
+/* ---- TDS ---- */
+const TDS=[
+ {id:'194C',label:'194C Contractors and sub-contractors',opts:[['Individual / HUF',1],['Others (firm, company, etc.)',2]],single:30000,year:100000},
+ {id:'194H',label:'194H Commission or brokerage',opts:[['All',2]],year:20000},
+ {id:'194IA',label:'194I(a) Rent: plant and machinery',opts:[['All',2]],year:600000},
+ {id:'194IB',label:'194I(b) Rent: land, building, furniture',opts:[['All',10]],year:600000},
+ {id:'194IBi',label:'194IB Rent by individual or HUF (monthly rent over ₹50,000)',opts:[['All',2]],single:50000},
+ {id:'194JA',label:'194J(a) Technical services, call centre, film royalty',opts:[['All',2]],year:50000},
+ {id:'194JB',label:'194J(b) Professional fees, director fees, other royalty',opts:[['All',10]],year:50000},
+ {id:'194AB',label:'194A Interest from bank or post office',opts:[['All',10]],year:50000},
+ {id:'194AO',label:'194A Interest from others',opts:[['All',10]],year:10000},
+ {id:'194DV',label:'194 Dividend',opts:[['All',10]],year:10000},
+ {id:'194D',label:'194D Insurance commission',opts:[['Individual / HUF',2],['Company',10]],year:20000},
+ {id:'194Q',label:'194Q Purchase of goods (on amount above ₹50 lakh)',opts:[['All',0.1]],year:5000000,excess:true,pan5:true},
+ {id:'194O',label:'194O E-commerce operator payments',opts:[['All',0.1]],year:500000,pan5:true},
+ {id:'194IAp',label:'194IA Purchase of immovable property (₹50 lakh and above)',opts:[['All',1]],single:5000000},
+ {id:'194M',label:'194M Contract or professional fees by individual or HUF',opts:[['All',2]],year:5000000},
+ {id:'194T',label:'194T Partner salary, interest, bonus, commission',opts:[['All',10]],year:20000},
+ {id:'194B',label:'194B Lottery, game show winnings',opts:[['All',30]],single:10000}];
+function tdsCalc(e,optIdx,amt,tot,pan){
+  let rate=e.opts[optIdx][1];
+  const over=(e.single!=null&&amt>e.single)||(e.year!=null&&tot>e.year);
+  if(!over)return {deduct:false,rate,base:0,tds:0};
+  if(!pan)rate=e.pan5?5:Math.max(rate,20);
+  let base=amt;
+  if(e.excess)base=Math.min(amt,Math.max(0,tot-e.year));
+  return {deduct:true,rate,base,tds:Math.round(base*rate/100)};
+}
+function monthsPart(d1,d2){
+  if(d2<=d1)return 0;
+  let m=(d2.getFullYear()-d1.getFullYear())*12+(d2.getMonth()-d1.getMonth());
+  if(d2.getDate()>d1.getDate())m+=1;
+  return Math.max(m,1);
+}
+
+/* ---- Tally XML ---- */
+const xesc=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+function tallyXml(txns,bank,company){
+  const vs=txns.filter(t=>t.date&&(t.dr>0||t.cr>0)).map(t=>{
+    const pay=t.dr>0,amt=pay?t.dr:t.cr,type=pay?'Payment':'Receipt',party=t.ledger||'Suspense A/c';
+    const e=(n,yes,a)=>`<ALLLEDGERENTRIES.LIST><LEDGERNAME>${xesc(n)}</LEDGERNAME><ISDEEMEDPOSITIVE>${yes?'Yes':'No'}</ISDEEMEDPOSITIVE><AMOUNT>${a}</AMOUNT></ALLLEDGERENTRIES.LIST>`;
+    const a=amt.toFixed(2);
+    return `<TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER VCHTYPE="${type}" ACTION="Create" OBJVIEW="Accounting Voucher View"><DATE>${ymd(t.date)}</DATE><VOUCHERTYPENAME>${type}</VOUCHERTYPENAME><NARRATION>${xesc((t.narr||'')+(t.ref?' | '+t.ref:''))}</NARRATION><EFFECTIVEDATE>${ymd(t.date)}</EFFECTIVEDATE>${e(pay?party:bank,true,'-'+a)}${e(pay?bank:party,false,a)}</VOUCHER></TALLYMESSAGE>`;
+  });
+  const co=company?`<STATICVARIABLES><SVCURRENTCOMPANY>${xesc(company)}</SVCURRENTCOMPANY></STATICVARIABLES>`:'<STATICVARIABLES/>';
+  return `<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>${co}</REQUESTDESC><REQUESTDATA>\n${vs.join('\n')}\n</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+}
+function applyRule(narr,rules){const n=String(narr||'').toUpperCase();for(const [k,l] of rules){if(k&&n.includes(k.toUpperCase()))return l;}return '';}
+
+/* ---- compliance calendar ---- */
+const D=(y,m,d)=>new Date(y,m,d);
+const COMPS=[
+ {id:'gstr1m',grp:'GST',label:'GSTR-1 (monthly)',due:(y,m)=>D(y,m,11)},
+ {id:'gstr1q',grp:'GST',label:'GSTR-1 (QRMP, quarterly)',due:(y,m)=>[0,3,6,9].includes(m)?D(y,m,13):null},
+ {id:'gstr3bm',grp:'GST',label:'GSTR-3B (monthly)',due:(y,m)=>D(y,m,20)},
+ {id:'gstr3bq',grp:'GST',label:'GSTR-3B (QRMP, quarterly)',due:(y,m)=>[0,3,6,9].includes(m)?D(y,m,22):null},
+ {id:'pmt06',grp:'GST',label:'PMT-06 (QRMP monthly payment)',due:(y,m)=>![0,3,6,9].includes(m)?D(y,m,25):null},
+ {id:'gstr9',grp:'GST',label:'GSTR-9 annual return',due:(y,m)=>m===11?D(y,11,31):null},
+ {id:'tdspay',grp:'TDS',label:'TDS / TCS payment',due:(y,m)=>m===3?D(y,3,30):D(y,m,7)},
+ {id:'tdsret',grp:'TDS',label:'TDS return (24Q / 26Q / 27Q)',due:(y,m)=>({6:D(y,6,31),9:D(y,9,31),0:D(y,0,31),4:D(y,4,31)})[m]||null},
+ {id:'tdscert',grp:'TDS',label:'TDS certificates (Form 16A)',due:(y,m)=>({7:D(y,7,15),10:D(y,10,15),1:D(y,1,15),5:D(y,5,15)})[m]||null},
+ {id:'pfesi',grp:'Payroll',label:'PF / ESI payment',due:(y,m)=>D(y,m,15)},
+ {id:'advtax',grp:'Income tax',label:'Advance tax instalment',due:(y,m)=>({5:D(y,5,15),8:D(y,8,15),11:D(y,11,15),2:D(y,2,15)})[m]||null},
+ {id:'taxaudit',grp:'Income tax',label:'Tax audit report',due:(y,m)=>m===8?D(y,8,30):null},
+ {id:'itrnon',grp:'Income tax',label:'ITR (non-audit cases)',due:(y,m)=>m===6?D(y,6,31):null},
+ {id:'itraud',grp:'Income tax',label:'ITR (audit cases)',due:(y,m)=>m===9?D(y,9,31):null}];
+function taskStatus(due,done,today){
+  if(done)return 'done';
+  const d=daysBetween(today,due);
+  return d<0?'overdue':d<=7?'soon':'upcoming';
+}
+//#logic-end
+
+/* ================= UI ================= */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const val=id=>$('#'+id).value;
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200);}
+let dl=null;
+(async()=>{try{dl=await (window.claude&&window.claude.use?window.claude.use('downloads'):null);}catch(e){dl=null;}})();
+async function saveFile(name,data){
+  if(!dl){try{const b=data instanceof Blob?data:new Blob([data],{type:/\.json$/.test(name)?'application/json':/\.xml$/.test(name)?'application/xml':'application/octet-stream'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);toast('Saved '+name);}catch(e){toast('Could not save: '+e.message);}return;}
+  try{await dl.save({filename:name,data});toast('Saved '+name);}
+  catch(e){if(e&&e.code==='declined')return;toast('Could not save: '+((e&&e.message)||e));}
+}
+async function copyText(t,box){
+  try{await navigator.clipboard.writeText(t);toast('Copied');}
+  catch(e){if(box){box.focus();box.select();}toast('Select the text and copy it with Ctrl+C');}
+}
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function readRows(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''}));}catch(err){rej(err);}};r.onerror=()=>rej(r.error);r.readAsArrayBuffer(file);});}
+function buildTable(rows2d,fields){
+  const hi=findHeader(rows2d,fields),headers=(rows2d[hi]||[]).map(h=>String(h).trim());
+  const rows=rows2d.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!==''));
+  return {headers,rows,map:guessMap(headers,fields)};
+}
+function renderMap(el,d,fields,onChange){
+  el.innerHTML=fields.map(f=>`<label class="fld"><span>${esc(f.label)}</span><select data-k="${f.key}"><option value="-1">none</option>${d.headers.map((h,i)=>`<option value="${i}"${d.map[f.key]===i?' selected':''}>${esc(h||'Column '+(i+1))}</option>`).join('')}</select></label>`).join('');
+  $$('select',el).forEach(s=>s.onchange=()=>{d.map[s.dataset.k]=+s.value;onChange();});
+}
+
+/* tabs */
+const TABS=['home','gst','bank','tracker','calendar','tax','more','clients','assign','billing','work','inbox','settings','team','backup'];
+function showTab(t){
+  if(!TABS.includes(t))t='home';
+  TABS.forEach(x=>{$('#tab-'+x).hidden=x!==t;});
+  $$('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
+  if(t==='home'&&window.dhRun)dhRun();
+  if(window.onTabShown)window.onTabShown(t);
+}
+$$('nav.tabs button').forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;showTab(b.dataset.tab);});
+window.addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
+
+/* ---------- GST recon UI ---------- */
+const G={books:null,g2b:null,rows:[],filter:'all'};
+function gstLoaded(kind,rows2d,name){
+  const d=buildTable(rows2d,GST_FIELDS);G[kind]=d;
+  const miss=GST_FIELDS.filter(f=>d.map[f.key]<0&&['gstin','inv'].includes(f.key));
+  $('#gs-'+kind).innerHTML=`${esc(name)}: ${d.rows.length} rows.`+(miss.length?` <span class="err">Choose the ${miss.map(m=>m.label).join(' and ')} column under Column mapping.</span>`:'');
+  renderMap($('#gm-'+kind),d,GST_FIELDS,gstRun);
+  gstRun();
+}
+$('#gf-books').onchange=async e=>{const f=e.target.files[0];if(f)try{gstLoaded('books',await readRows(f),f.name);}catch(x){toast('Could not read that file');}};
+$('#gf-2b').onchange=async e=>{const f=e.target.files[0];if(f)try{gstLoaded('g2b',await readRows(f),f.name);}catch(x){toast('Could not read that file');}};
+$('#g-sample').onclick=()=>{
+  gstLoaded('books',[['Supplier GSTIN','Invoice No','Invoice Date','Taxable Value','IGST','CGST','SGST'],
+   ['27AABCS1234A1Z5','INV/2026/041','03/10/2026',100000,0,9000,9000],
+   ['27AABCS1234A1Z5','INV/2026/052','14/10/2026',50000,0,4500,4500],
+   ['29AAACR5055K1ZL','R-1187','06/10/2026',240000,43200,0,0],
+   ['24AAHCM7890B1Z2','0093','19/10/2026',80000,0,7200,7200],
+   ['27AADCT4421F1ZP','TX-778','22/10/2026',36000,0,3240,3240],
+   ['07AAFCD2211Q1Z8','DL/553','28/10/2026',150000,27000,0,0]],'Example purchase register');
+  gstLoaded('g2b',[['GSTIN of supplier','Invoice number','Invoice Date','Taxable Value (₹)','Integrated Tax(₹)','Central Tax(₹)','State/UT Tax(₹)'],
+   ['27AABCS1234A1Z5','INV/2026/041','03-Oct-2026',100000,0,9000,9000],
+   ['27AABCS1234A1Z5','INV-2026-052','14-Oct-2026',50000,0,4000,4000],
+   ['29AAACR5055K1ZL','R1187','06-Oct-2026',240000,43200,0,0],
+   ['24AAHCM7890B1Z2','93','19-Oct-2026',80000,0,7200,7200],
+   ['33AAGCP9012L1ZK','PL/220','25-Oct-2026',60000,10800,0,0]],'Example GSTR-2B');
+};
+const ST={matched:['Matched','good'],differs:['Amount differs','warn'],notin2b:['Not in 2B','bad'],notinbooks:['Not in books','mute']};
+function gstRun(){
+  if(!G.books||!G.g2b){$('#g-out').innerHTML='';$('#g-export').hidden=true;return;}
+  G.rows=reconcile(G.books,G.g2b,num(val('g-tol')));
+  $('#g-export').hidden=false;gstRender();
+}
+function gstRender(){
+  const R=G.rows,sum=(st,f)=>R.filter(r=>r.status===st).reduce((a,r)=>a+r[f],0),cnt=st=>R.filter(r=>r.status===st).length;
+  const bookTax=R.reduce((a,r)=>a+r.bTax,0),gTax=R.reduce((a,r)=>a+r.gTax,0);
+  const shown=G.filter==='all'?R:R.filter(r=>r.status===G.filter);
+  const f=[['all','All ('+R.length+')'],['matched','Matched ('+cnt('matched')+')'],['differs','Amount differs ('+cnt('differs')+')'],['notin2b','Not in 2B ('+cnt('notin2b')+')'],['notinbooks','Not in books ('+cnt('notinbooks')+')']];
+  $('#g-out').innerHTML=`<div class="stats">
+    <div class="stat"><b>₹${inr(bookTax)}</b><span>Tax as per books</span></div>
+    <div class="stat"><b>₹${inr(gTax)}</b><span>Tax as per GSTR-2B</span></div>
+    <div class="stat good"><b>₹${inr(sum('matched','gTax'))}</b><span>Matched (${cnt('matched')} invoices)</span></div>
+    <div class="stat warn"><b>₹${inr(sum('differs','diff'))}</b><span>Net difference on mismatched invoices</span></div>
+    <div class="stat bad"><b>₹${inr(sum('notin2b','bTax'))}</b><span>In books, not in 2B: ITC at risk</span></div>
+    <div class="stat"><b>₹${inr(sum('notinbooks','gTax'))}</b><span>In 2B, not in books: check for missing entries</span></div></div>
+    <div class="filters">${f.map(([k,l])=>`<button data-f="${k}" aria-pressed="${G.filter===k}">${l}</button>`).join('')}</div>
+    <div class="tw tall"><table><thead><tr><th>Status</th><th>Supplier GSTIN</th><th>Invoice</th><th>Date</th><th class="n">Books tax</th><th class="n">2B tax</th><th class="n">Difference</th></tr></thead><tbody>
+    ${shown.map(r=>`<tr><td><span class="chip ${ST[r.status][1]}">${ST[r.status][0]}</span></td><td class="n" style="text-align:left">${esc(r.gstin)}</td><td>${esc(r.inv)}</td><td>${fmtD(r.date)}</td><td class="n">${inr(r.bTax)}</td><td class="n">${inr(r.gTax)}</td><td class="n">${r.status==='matched'&&Math.abs(r.diff)<0.005?'':inr(r.diff)}</td></tr>`).join('')||'<tr><td colspan="7">Nothing in this group.</td></tr>'}
+    </tbody></table></div>`;
+  $$('#g-out .filters button').forEach(b=>b.onclick=()=>{G.filter=b.dataset.f;gstRender();});
+}
+$('#g-run').onclick=gstRun;$('#g-tol').oninput=gstRun;
+$('#g-export').onclick=()=>{
+  const data=G.rows.map(r=>({Status:ST[r.status][0],GSTIN:r.gstin,Invoice:r.inv,Date:fmtD(r.date),'Books taxable':r.bTaxable,'Books tax':r.bTax,'2B taxable':r.gTaxable,'2B tax':r.gTax,Difference:r.diff}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Reconciliation');
+  saveFile('GSTR-2B-reconciliation.xlsx',XLSX.write(wb,{type:'array',bookType:'xlsx'}));
+};
+
+/* GST calculators */
+function gcRun(){
+  const r=gstSplit(num(val('gc-amt')),+val('gc-rate'),val('gc-mode')==='inc'),inter=val('gc-sup')==='inter',h=+val('gc-rate')/2;
+  $('#gc-out').innerHTML=`<tbody><tr><td>Taxable value</td><td class="n">${inr(r.base)}</td></tr>`+
+   (inter?`<tr><td>IGST @ ${+val('gc-rate')}%</td><td class="n">${inr(r.tax)}</td></tr>`:`<tr><td>CGST @ ${h}%</td><td class="n">${inr(r.tax/2)}</td></tr><tr><td>SGST @ ${h}%</td><td class="n">${inr(r.tax/2)}</td></tr>`)+
+   `<tr class="total"><td>Invoice total</td><td class="n">${inr(r.total)}</td></tr></tbody>`;
+}
+['gc-amt','gc-rate','gc-mode','gc-sup'].forEach(i=>$('#'+i).oninput=gcRun);
+function lfRun(){
+  const due=parseDate(val('lf-due')),paid=parseDate(val('lf-paid'));
+  if(!due||!paid){$('#lf-out').innerHTML='<tbody><tr><td>Enter both dates.</td></tr></tbody>';return;}
+  const days=Math.max(0,daysBetween(due,paid)),r=lateFee(val('lf-type'),val('lf-band'),days,num(val('lf-tax')));
+  $('#lf-out').innerHTML=`<tbody><tr><td>Days of delay</td><td class="n">${r.days}</td></tr>
+   <tr><td>Late fee: ₹${r.perDay} a day, capped at ₹${inr0(r.cap)}</td><td class="n">${inr(r.fee)}</td></tr>
+   <tr><td>CGST ${inr(r.fee/2)} + SGST ${inr(r.fee/2)}, payable in cash</td><td class="n"></td></tr>
+   <tr><td>Interest @ 18% a year on tax paid late</td><td class="n">${inr(r.interest)}</td></tr>
+   <tr class="total"><td>Total payable</td><td class="n">${inr(r.total)}</td></tr></tbody>`;
+}
+['lf-type','lf-band','lf-due','lf-paid','lf-tax'].forEach(i=>$('#'+i).oninput=lfRun);
+(function(){const t=new Date();$('#lf-paid').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');})();
+
+/* ---------- Bank to Tally ---------- */
+const B={d:null,txns:[],rules:lsGet('ca.rules',[['INTEREST','Bank Interest'],['SMS CHARGES','Bank Charges'],['CHARGES','Bank Charges'],['SALARY','Salary'],['GST','GST Payment'],['TDS','TDS Payable'],['ATM','Cash']])};
+function bankBuild(){
+  if(!B.d)return;const m=B.d.map,c=(r,k)=>m[k]>=0?r[m[k]]:'';
+  B.txns=B.d.rows.map(r=>({date:parseDate(c(r,'date')),narr:String(c(r,'narr')).trim(),ref:String(c(r,'ref')).trim(),dr:Math.abs(num(c(r,'dr'))),cr:Math.abs(num(c(r,'cr'))),ledger:'',manual:false})).filter(t=>t.date&&(t.dr>0||t.cr>0));
+  bankRules();
+}
+function bankRules(){
+  B.txns.forEach(t=>{if(!t.manual){t.ledger=applyRule(t.narr,B.rules)||(t.dr>0?val('b-sp'):val('b-sr'));}});
+  bankRender();
+}
+function bankLoaded(rows2d,name){
+  B.d=buildTable(rows2d,BANK_FIELDS);
+  const miss=BANK_FIELDS.filter(f=>B.d.map[f.key]<0&&['date','dr','cr'].includes(f.key));
+  $('#bs').innerHTML=`${esc(name)}: ${B.d.rows.length} rows.`+(miss.length?` <span class="err">Choose the ${miss.map(m=>m.label).join(', ')} column under Column mapping.</span>`:'');
+  renderMap($('#bm'),B.d,BANK_FIELDS,bankBuild);bankBuild();
+}
+$('#bf').onchange=async e=>{const f=e.target.files[0];if(f)try{bankLoaded(await readRows(f),f.name);}catch(x){toast('Could not read that file');}};
+$('#b-sample').onclick=()=>bankLoaded([['Txn Date','Description','Cheque/Ref No','Withdrawal','Deposit','Balance'],
+  ['01/11/2026','NEFT-ACME SUPPLIES-INV 332','N1182',45000,'',955000],
+  ['02/11/2026','UPI-RAMESH TRADERS-SALE','U8841','',62500,1017500],
+  ['04/11/2026','SALARY OCT 2026 - STAFF','S0411',118000,'',899500],
+  ['05/11/2026','SMS CHARGES Q2','',29.5,'',899470.5],
+  ['07/11/2026','TDS PAYMENT CHALLAN 281','C281',14200,'',885270.5],
+  ['08/11/2026','NEFT-KUMAR AND SONS-PAYMENT RCVD','N2290','',210000,1095270.5],
+  ['09/11/2026','SB INTEREST CREDIT','','',1843,1097113.5],
+  ['10/11/2026','RTGS-GLOBAL LOGISTICS FREIGHT','R5531',32400,'',1064713.5]],'Example bank statement');
+function bankRender(){
+  const T=B.txns;
+  if(!T.length){$('#b-out').innerHTML=B.d?'<p class="err" style="margin-top:16px">No transactions found. Check the Date, Withdrawal and Deposit columns.</p>':'';return;}
+  const dr=T.reduce((a,t)=>a+t.dr,0),cr=T.reduce((a,t)=>a+t.cr,0),susp=T.filter(t=>t.ledger===val('b-sp')||t.ledger===val('b-sr')).length;
+  $('#b-out').innerHTML=`<h2>Vouchers</h2><div class="stats">
+   <div class="stat"><b>${T.length}</b><span>Transactions</span></div>
+   <div class="stat"><b>₹${inr(dr)}</b><span>Payments (${T.filter(t=>t.dr>0).length})</span></div>
+   <div class="stat"><b>₹${inr(cr)}</b><span>Receipts (${T.filter(t=>t.cr>0).length})</span></div>
+   <div class="stat ${susp?'warn':'good'}"><b>${susp}</b><span>Still in suspense</span></div></div>
+   <div class="tw tall"><table><thead><tr><th>Date</th><th>Narration</th><th>Type</th><th class="n">Amount</th><th>Ledger</th></tr></thead><tbody>
+   ${T.map((t,i)=>`<tr><td>${fmtD(t.date)}</td><td>${esc(t.narr)}${t.ref?'<br><span class="sub">'+esc(t.ref)+'</span>':''}</td><td><span class="chip ${t.dr>0?'warn':'good'}">${t.dr>0?'Payment':'Receipt'}</span></td><td class="n">${inr(t.dr>0?t.dr:t.cr)}</td><td><input class="led" data-i="${i}" value="${esc(t.ledger)}" aria-label="Ledger for row ${i+1}"></td></tr>`).join('')}
+   </tbody></table></div>
+   <div class="row" style="margin-top:14px">
+    <button class="btn" id="b-xml">Copy Tally XML</button>
+    <button class="btn ghost" id="b-save">Save XML as text file</button>
+    <button class="btn ghost" id="b-xlsx">Save as Excel</button></div>
+   <p class="note">Every ledger named above must already exist in Tally, or the voucher is rejected on import. In Tally: Gateway of Tally, Import Data, Vouchers. A saved text file needs its extension changed from .txt to .xml before importing.</p>
+   <textarea class="xmlbox" id="b-xmlbox" readonly hidden></textarea>`;
+  $$('#b-out input.led').forEach(inp=>inp.oninput=()=>{const t=B.txns[+inp.dataset.i];t.ledger=inp.value;t.manual=true;});
+  const xml=()=>tallyXml(B.txns,val('b-bank').trim()||'Bank',val('b-comp').trim());
+  $('#b-xml').onclick=()=>{const bx=$('#b-xmlbox');bx.value=xml();bx.hidden=false;copyText(bx.value,bx);};
+  $('#b-save').onclick=()=>saveFile('tally-vouchers.txt',xml());
+  $('#b-xlsx').onclick=()=>{
+    const data=B.txns.map(t=>({Date:fmtD(t.date),Narration:t.narr,Reference:t.ref,'Voucher type':t.dr>0?'Payment':'Receipt',Ledger:t.ledger,Debit:t.dr||'',Credit:t.cr||''}));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Vouchers');
+    saveFile('bank-vouchers.xlsx',XLSX.write(wb,{type:'array',bookType:'xlsx'}));};
+}
+function rulesRender(){
+  $('#r-list').innerHTML=`<table><thead><tr><th>Keyword in narration</th><th>Ledger</th><th></th></tr></thead><tbody>${B.rules.map((r,i)=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td><button class="btn ghost small" data-i="${i}">Remove</button></td></tr>`).join('')||'<tr><td colspan="3">No rules yet.</td></tr>'}</tbody></table>`;
+  $$('#r-list button').forEach(b=>b.onclick=()=>{B.rules.splice(+b.dataset.i,1);lsSet('ca.rules',B.rules);rulesRender();});
+}
+$('#r-add').onclick=()=>{const k=val('r-k').trim(),l=val('r-l').trim();if(!k||!l){toast('Enter a keyword and a ledger');return;}B.rules.push([k,l]);lsSet('ca.rules',B.rules);$('#r-k').value='';$('#r-l').value='';rulesRender();bankRules();};
+$('#b-apply').onclick=()=>{B.txns.forEach(t=>t.manual=false);bankRules();};
+['b-sp','b-sr'].forEach(i=>$('#'+i).onchange=bankRules);
+rulesRender();
+
+/* ---------- Tracker ---------- */
+const TR={clients:lsGet('ca.clients',null),status:lsGet('ca.status',{}),edit:null,del:null};
+if(!TR.clients){TR.clients=[
+  {id:'s1',name:'Example Traders Pvt Ltd',gstin:'',comps:['gstr1m','gstr3bm','tdspay','tdsret','pfesi','advtax'],sample:true},
+  {id:'s2',name:'Example Clinic LLP',gstin:'',comps:['gstr1q','gstr3bq','pmt06','tdspay','itraud','taxaudit'],sample:true}];}
+const saveTR=()=>{lsSet('ca.clients',TR.clients);lsSet('ca.status',TR.status);};
+const today0=()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());};
+(function(){const t=new Date();$('#t-month').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');})();
+function trCheckboxes(sel){
+  const grps=[...new Set(COMPS.map(c=>c.grp))];
+  $('#cl-checks').innerHTML=grps.map(g=>`<div class="group-t">${g}</div><div class="checks">${COMPS.filter(c=>c.grp===g).map(c=>`<label><input type="checkbox" value="${c.id}"${sel.includes(c.id)?' checked':''}> ${esc(c.label)}</label>`).join('')}</div>`).join('');
+}
+function trRender(){
+  const [y,m0]=val('t-month').split('-').map(Number),m=m0-1;
+  const cs=$('#t-client'),cur=cs.value;
+  cs.innerHTML='<option value="">All clients</option>'+TR.clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  cs.value=TR.clients.some(c=>c.id===cur)?cur:'';
+  const today=today0(),tasks=[];
+  TR.clients.forEach(c=>{if(cs.value&&c.id!==cs.value)return;c.comps.forEach(id=>{const comp=COMPS.find(x=>x.id===id);if(!comp)return;const due=comp.due(y,m);if(!due)return;const key=c.id+'|'+id+'|'+y+'-'+m0,done=!!TR.status[key];tasks.push({c,comp,due,key,done,st:taskStatus(due,done,today)});});});
+  tasks.sort((a,b)=>a.due-b.due||a.c.name.localeCompare(b.c.name));
+  const n=s=>tasks.filter(t=>t.st===s).length;
+  $('#t-stats').innerHTML=`<div class="stat bad"><b>${n('overdue')}</b><span>Overdue</span></div><div class="stat warn"><b>${n('soon')}</b><span>Due within 7 days</span></div><div class="stat"><b>${n('upcoming')}</b><span>Later this month</span></div><div class="stat good"><b>${n('done')}</b><span>Done</span></div>`;
+  const sh=val('t-show'),list=tasks.filter(t=>sh==='all'||(sh==='pending'&&t.st!=='done')||(sh==='overdue'&&t.st==='overdue'));
+  const CH={done:['Done','good'],overdue:['Overdue','bad'],soon:['Due soon','warn'],upcoming:['Upcoming','mute']};
+  const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  $('#t-list').innerHTML=`<table><thead><tr><th>Done</th><th>Due</th><th>Filing</th><th>Client</th><th>Status</th></tr></thead><tbody>${list.map(t=>{const dd=daysBetween(today,t.due);return `<tr><td><input type="checkbox" data-k="${esc(t.key)}"${t.done?' checked':''} aria-label="Mark ${esc(t.comp.label)} done for ${esc(t.c.name)}"></td><td class="n" style="text-align:left">${wd[t.due.getDay()]} ${fmtD(t.due)}</td><td>${esc(t.comp.label)}</td><td>${esc(t.c.name)}</td><td><span class="chip ${CH[t.st][1]}">${CH[t.st][0]}</span>${t.st==='overdue'?' <span class="sub">'+(-dd)+' days</span>':t.st==='soon'?' <span class="sub">'+(dd===0?'today':dd+' days')+'</span>':''}</td></tr>`;}).join('')||'<tr><td colspan="5">No filings fall in this month for the selected clients.</td></tr>'}</tbody></table>`;
+  $$('#t-list input[type=checkbox]').forEach(b=>b.onchange=()=>{if(b.checked)TR.status[b.dataset.k]=true;else delete TR.status[b.dataset.k];saveTR();trRender();});
+  $('#t-banner').innerHTML=TR.clients.some(c=>c.sample)?'<p class="note" style="margin:0 0 10px">Clients marked <span class="example">Example</span> are placeholders. Edit or remove them.</p>':'';
+  $('#cl-list').innerHTML=`<table><thead><tr><th>Client</th><th>Filings</th><th></th></tr></thead><tbody>${TR.clients.map(c=>`<tr><td>${esc(c.name)}${c.sample?'<span class="example">Example</span>':''}${c.gstin?'<br><span class="sub n">'+esc(c.gstin)+'</span>':''}</td><td>${c.comps.map(id=>{const x=COMPS.find(k=>k.id===id);return x?`<span class="chip mute" style="margin:0 4px 4px 0">${esc(x.label)}</span>`:'';}).join('')}</td><td style="white-space:nowrap"><button class="btn ghost small" data-e="${c.id}">Edit</button> ${TR.del===c.id?`<button class="btn small" data-y="${c.id}">Confirm delete</button>`:`<button class="btn ghost small" data-d="${c.id}">Delete</button>`}</td></tr>`).join('')||'<tr><td colspan="3">No clients yet. Add one above.</td></tr>'}</tbody></table>`;
+  $$('#cl-list [data-e]').forEach(b=>b.onclick=()=>{const c=TR.clients.find(x=>x.id===b.dataset.e);TR.edit=c.id;$('#cl-name').value=c.name;$('#cl-gstin').value=c.gstin||'';trCheckboxes(c.comps);$('#cl-title').textContent='Edit client';$('#cl-cancel').hidden=false;$('#cl-name').focus();});
+  $$('#cl-list [data-d]').forEach(b=>b.onclick=()=>{TR.del=b.dataset.d;trRender();});
+  $$('#cl-list [data-y]').forEach(b=>b.onclick=()=>{TR.clients=TR.clients.filter(c=>c.id!==b.dataset.y);TR.del=null;saveTR();trRender();});
+}
+function clReset(){TR.edit=null;$('#cl-name').value='';$('#cl-gstin').value='';trCheckboxes([]);$('#cl-title').textContent='Add client';$('#cl-cancel').hidden=true;}
+$('#cl-save').onclick=()=>{
+  const name=val('cl-name').trim();if(!name){toast('Enter the client name');return;}
+  const comps=$$('#cl-checks input:checked').map(i=>i.value);
+  if(TR.edit){const c=TR.clients.find(x=>x.id===TR.edit);Object.assign(c,{name,gstin:val('cl-gstin').trim().toUpperCase(),comps});delete c.sample;}
+  else TR.clients.push({id:'c'+Date.now().toString(36),name,gstin:val('cl-gstin').trim().toUpperCase(),comps});
+  saveTR();clReset();trRender();toast('Client saved');
+};
+$('#cl-cancel').onclick=clReset;
+['t-month','t-client','t-show'].forEach(i=>$('#'+i).oninput=trRender);
+$('#t-export').onclick=()=>saveFile('ca-tracker-backup.json',JSON.stringify({clients:TR.clients,status:TR.status},null,1));
+$('#t-import').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.clients))throw 0;TR.clients=j.clients;TR.status=j.status||{};saveTR();trRender();toast('Backup restored');}catch(x){toast('That file is not a tracker backup');}};r.readAsText(f);};
+trCheckboxes([]);trRender();
+
+/* ---------- Tax ---------- */
+function itRun(){
+  const inc=num(val('it-inc')),sal=$('#it-sal').checked,age=val('it-age');
+  const nTi=Math.max(0,inc-(sal?75000:0)),oTi=Math.max(0,inc-(sal?50000:0)-num(val('it-ded')));
+  const n=calcRegime('new',nTi,age),o=calcRegime('old',oTi,age),bestNew=n.total<=o.total;
+  const row=(l,a,b)=>`<tr><td>${l}</td><td class="n">${inr(a)}</td><td class="n">${inr(b)}</td></tr>`;
+  $('#it-out').innerHTML=`<thead><tr><th></th><th class="n${bestNew?' best':''}">New regime${bestNew?' (lower)':''}</th><th class="n${bestNew?'':' best'}">Old regime${bestNew?'':' (lower)'}</th></tr></thead><tbody>
+   ${row('Taxable income',n.ti,o.ti)}${row('Tax on slabs',n.tax,o.tax)}${row('Less: rebate',-n.rebate,-o.rebate)}${row('Surcharge (after marginal relief)',n.surcharge,o.surcharge)}${row('Health and education cess 4%',n.cess,o.cess)}
+   <tr class="total"><td>Total tax</td><td class="n">${inr0(n.total)}</td><td class="n">${inr0(o.total)}</td></tr>
+   <tr><td>Saving with the lower regime</td><td class="n" colspan="2" style="text-align:right">₹${inr0(Math.abs(n.total-o.total))}</td></tr></tbody>`;
+  const best=Math.min(n.total,o.total);
+  if(best>10000){
+    const p=[[.15,'15 Jun 2026'],[.45,'15 Sep 2026'],[.75,'15 Dec 2026'],[1,'15 Mar 2027']];let prev=0;
+    $('#it-adv').innerHTML=`<h3 style="margin-top:16px">Advance tax on the lower figure (before TDS)</h3><div class="tw"><table><thead><tr><th>By</th><th class="n">Cumulative</th><th class="n">This instalment</th></tr></thead><tbody>${p.map(([f,d])=>{const cum=Math.round(best*f),inst=cum-prev;prev=cum;return `<tr><td>${d}</td><td class="n">${inr0(cum)}</td><td class="n">${inr0(inst)}</td></tr>`;}).join('')}</tbody></table></div>`;
+  }else $('#it-adv').innerHTML='<p class="note">Tax after TDS below ₹10,000 means no advance tax is due.</p>';
+}
+['it-inc','it-ded','it-age','it-sal'].forEach(i=>$('#'+i).oninput=itRun);
+
+$('#td-sec').innerHTML=TDS.map((e,i)=>`<option value="${i}">${esc(e.label)}</option>`).join('');
+function tdOpts(){const e=TDS[+val('td-sec')];$('#td-opt').innerHTML=e.opts.map((o,i)=>`<option value="${i}">${esc(o[0])} (${o[1]}%)</option>`).join('');$('#td-optw').hidden=e.opts.length<2;}
+function tdRun(){
+  const e=TDS[+val('td-sec')],amt=num(val('td-amt')),tot=Math.max(num(val('td-tot')),amt),r=tdsCalc(e,+val('td-opt')||0,amt,tot,$('#td-pan').checked);
+  const thr=[e.single!=null?'₹'+inr0(e.single)+' per payment':'',e.year!=null?'₹'+inr0(e.year)+' in the year':''].filter(Boolean).join(' or ');
+  $('#td-out').innerHTML=`<tbody><tr><td>Threshold</td><td class="n" style="text-align:right;white-space:normal">${thr}</td></tr>`+
+   (r.deduct?`<tr><td>Amount on which TDS applies</td><td class="n">${inr(r.base)}</td></tr><tr><td>Rate${$('#td-pan').checked?'':' (no PAN)'}</td><td class="n">${r.rate}%</td></tr><tr class="total"><td>TDS to deduct</td><td class="n">${inr0(r.tds)}</td></tr><tr><td>Net payable to the party</td><td class="n">${inr0(amt-r.tds)}</td></tr>`:`<tr class="total"><td>Below threshold: no TDS</td><td class="n">0</td></tr>`)+'</tbody>';
+}
+$('#td-sec').oninput=()=>{tdOpts();tdRun();};['td-opt','td-amt','td-tot','td-pan'].forEach(i=>$('#'+i).oninput=tdRun);
+function tiRun(){
+  const late=val('ti-case')==='dep';
+  $('#ti-l1').firstChild.textContent=late?'Date TDS was deducted':'Date it should have been deducted';
+  $('#ti-l2').firstChild.textContent=late?'Date deposited':'Date actually deducted';
+  const d1=parseDate(val('ti-d1')),d2=parseDate(val('ti-d2'));
+  if(!d1||!d2){$('#ti-out').innerHTML='<tbody><tr><td>Enter both dates.</td></tr></tbody>';return;}
+  const mo=monthsPart(d1,d2),rate=late?1.5:1,amt=num(val('ti-amt')),i=amt*rate/100*mo;
+  $('#ti-out').innerHTML=`<tbody><tr><td>Months (part of a month counts as a month)</td><td class="n">${mo}</td></tr><tr><td>Rate per month</td><td class="n">${rate}%</td></tr><tr class="total"><td>Interest payable</td><td class="n">${inr0(i)}</td></tr></tbody>`;
+}
+['ti-case','ti-amt','ti-d1','ti-d2'].forEach(i=>$('#'+i).oninput=tiRun);
+function lf2Run(){
+  const due=parseDate(val('lf2-due')),paid=parseDate(val('lf2-paid'));
+  if(!due||!paid){$('#lf2-out').innerHTML='<tbody><tr><td>Enter both dates.</td></tr></tbody>';return;}
+  const days=Math.max(0,daysBetween(due,paid)),tds=num(val('lf2-tds')),fee=Math.min(days*200,tds);
+  $('#lf2-out').innerHTML=`<tbody><tr><td>Days of delay</td><td class="n">${days}</td></tr><tr><td>₹200 a day</td><td class="n">${inr0(days*200)}</td></tr><tr class="total"><td>Late fee (limited to TDS)</td><td class="n">${inr0(fee)}</td></tr></tbody>`;
+}
+['lf2-due','lf2-paid','lf2-tds'].forEach(i=>$('#'+i).oninput=lf2Run);
+
+
+/* ---------- More modules ---------- */
+const R2=x=>Math.round(x*100)/100;
+function b3Run(){
+  const r=+val('b3-rate'),ti=R2(num(val('b3-intra'))*r/200),ii=R2(num(val('b3-inter'))*r/100),rcm=num(val('b3-rcm')),rev=num(val('b3-rev'))/3;
+  let L={i:ii,c:ti,s:ti},C={i:Math.max(0,num(val('b3-ci'))-rev),c:Math.max(0,num(val('b3-cc'))-rev),s:Math.max(0,num(val('b3-cs'))-rev)};
+  L.i+=rcm/3;L.c+=rcm/3;L.s+=rcm/3;
+  const use=(h,order)=>{let need=L[h];for(const k of order){const u=Math.min(need,C[k]);C[k]-=u;need-=u;}L[h]=need;};
+  const gross={...L};
+  use('i',['i','c','s']);use('c',['c','i']);use('s',['s','i']);
+  const f=(a)=>`<td class="n">${inr(a)}</td>`;
+  $('#b3-out').innerHTML=`<thead><tr><th></th><th class="n">IGST</th><th class="n">CGST</th><th class="n">SGST</th></tr></thead><tbody><tr><td>Output tax (incl. RCM)</td>${f(gross.i)}${f(gross.c)}${f(gross.s)}</tr><tr class="total"><td>Cash to pay</td>${f(L.i)}${f(L.c)}${f(L.s)}</tr><tr><td>ITC carried forward</td>${f(C.i)}${f(C.c)}${f(C.s)}</tr></tbody>`;
+}
+['b3-intra','b3-inter','b3-rate','b3-rcm','b3-ci','b3-cc','b3-cs','b3-rev'].forEach(i=>$('#'+i).oninput=b3Run);
+$('#bt-sec').innerHTML=TDS.map((e,i)=>`<option value="${i}">${esc(e.label)}</option>`).join('');
+let BT=[];
+function btRun(){
+  const e=TDS[+val('bt-sec')];BT=[];
+  let tp=0,tt=0;
+  const rows=val('bt-in').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a[0]&&a[1]).map(a=>{const amt=num(a[1]),pan=!/^n/i.test(a[2]||'y'),r=tdsCalc(e,0,amt,amt,pan);tp+=amt;tt+=r.deduct?r.tds:0;BT.push({Party:a[0],Amount:amt,PAN:pan?'Y':'N',Rate:r.deduct?r.rate:0,TDS:r.deduct?r.tds:0});return `<tr><td>${esc(a[0])}</td><td class="n">${inr0(amt)}</td><td>${pan?'Yes':'No'}</td><td class="n">${r.deduct?r.rate+'%':'-'}</td><td class="n">${inr0(r.deduct?r.tds:0)}</td></tr>`;});
+  $('#bt-out').innerHTML=`<thead><tr><th>Party</th><th class="n">Amount</th><th>PAN</th><th class="n">Rate</th><th class="n">TDS</th></tr></thead><tbody>${rows.join('')}<tr class="total"><td>Total</td><td class="n">${inr0(tp)}</td><td></td><td></td><td class="n">${inr0(tt)}</td></tr></tbody>`;
+}
+$('#bt-run').onclick=btRun;$('#bt-sec').oninput=btRun;
+$('#bt-x').onclick=()=>{btRun();const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(BT),'TDS');saveFile('bulk-tds.xlsx',XLSX.write(wb,{type:'array',bookType:'xlsx'}));};
+const parseLines=t=>t.split('\n').map(l=>{const a=l.split(',').map(x=>x.trim());return {d:parseDate(a[0]),n:a[1]||'',a:num(a[2])};}).filter(x=>x.d&&x.a);
+function brRun(){
+  const B=parseLines(val('br-b')),S=parseLines(val('br-s')),w=num(val('br-d')),used=new Set();
+  const un=[],ok=[];
+  B.forEach(b=>{const j=S.findIndex((s,i)=>!used.has(i)&&Math.abs(s.a-b.a)<0.01&&Math.abs(daysBetween(b.d,s.d))<=w);if(j>=0){used.add(j);ok.push([b,S[j]]);}else un.push(b);});
+  const bank=S.filter((s,i)=>!used.has(i));window.BRM=bank;const sum=a=>a.reduce((t,x)=>t+x.a,0),t=(a,h)=>a.length?a.map(x=>`<tr><td>${fmtD(x.d)}</td><td>${esc(x.n)}</td><td class="n">${inr(x.a)}</td></tr>`).join(''):`<tr><td colspan="3">None</td></tr>`;
+  $('#br-out').innerHTML=`<div class="stats"><div class="stat good"><b>${ok.length}</b><span>Matched</span></div><div class="stat warn"><b>${un.length}</b><span>In books, not in bank</span></div><div class="stat warn"><b>${bank.length}</b><span>In bank, not in books</span></div></div><div class="grid"><div class="tw"><table><thead><tr><th colspan="3">Not yet cleared in bank</th></tr></thead><tbody>${t(un)}<tr class="total"><td colspan="2">Total</td><td class="n">${inr(sum(un))}</td></tr></tbody></table></div><div class="tw"><table><thead><tr><th colspan="3">Not in books (charges, interest, missed entries)</th></tr></thead><tbody>${t(bank)}<tr class="total"><td colspan="2">Total</td><td class="n">${inr(sum(bank))}</td></tr></tbody></table></div></div>`;
+}
+$('#br-run').onclick=brRun;
+function bkRun(){
+  const L=val('bk-in').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a[0]).map(a=>({n:a[0],d:num(a[1]),c:num(a[2])}));
+  const dr=L.reduce((t,x)=>t+x.d,0),cr=L.reduce((t,x)=>t+x.c,0),f=[];
+  if(Math.abs(dr-cr)>0.5)f.push(['bad',`Trial balance does not tally: debit ${inr(dr)}, credit ${inr(cr)}, difference ${inr(dr-cr)}`]);
+  L.forEach(x=>{const n=x.n.toLowerCase();
+    if(/cash/.test(n)&&x.c>x.d)f.push(['bad',`${x.n} has a credit balance of ${inr(x.c-x.d)} (negative cash)`]);
+    if(/suspense|difference|clearing/.test(n)&&(x.d||x.c))f.push(['warn',`${x.n} carries a balance of ${inr(x.d||x.c)}; clear it before finalising`]);
+    if(x.d&&x.c)f.push(['warn',`${x.n} shows both debit and credit; net it off`]);
+    if(/debtor|receivable/.test(n)&&x.c>x.d)f.push(['warn',`${x.n} is in credit; check for advances or wrong postings`]);
+    if(/creditor|payable/.test(n)&&x.d>x.c)f.push(['warn',`${x.n} is in debit; check for excess payments`]);});
+  const seen={};L.forEach(x=>{const k=x.n.toLowerCase();if(seen[k])f.push(['warn',`Duplicate ledger name: ${x.n}`]);seen[k]=1;});
+  $('#bk-out').innerHTML=`<div class="stats"><div class="stat"><b>${inr(dr)}</b><span>Total debit</span></div><div class="stat"><b>${inr(cr)}</b><span>Total credit</span></div></div>`+(f.length?f.map(x=>`<p><span class="chip ${x[0]}">${x[0]==='bad'?'Error':'Check'}</span> ${esc(x[1])}</p>`).join(''):'<p><span class="chip good">All clear</span> No issues found in these checks.</p>');
+}
+$('#bk-run').onclick=bkRun;
+function dpRun(){
+  let c=num(val('dp-c')),r=num(val('dp-r'))/100,n=Math.max(1,+val('dp-y')),sv=num(val('dp-s')),w=c,tot=0,h=val('dp-h')==='1',rows='';
+  for(let y=1;y<=n;y++){const rr=y===1&&h?r/2:r,d=val('dp-m')==='wdv'?Math.max(0,Math.min(w-sv,w*rr)):Math.max(0,Math.min(w-sv,(c-sv)*rr));tot+=d;rows+=`<tr><td>${y}</td><td class="n">${inr(w)}</td><td class="n">${inr(d)}</td><td class="n">${inr(tot)}</td><td class="n">${inr(w-d)}</td></tr>`;w-=d;}
+  $('#dp-out').innerHTML=`<thead><tr><th>Year</th><th class="n">Opening</th><th class="n">Depreciation</th><th class="n">Accumulated</th><th class="n">Closing</th></tr></thead><tbody>${rows}</tbody>`;
+}
+['dp-c','dp-r','dp-m','dp-y','dp-s','dp-h'].forEach(i=>$('#'+i).oninput=dpRun);
+function inRun(){
+  const P=num(val('in-p')),r=num(val('in-r'))/100,a=parseDate(val('in-a')),b=parseDate(val('in-b'));
+  if(!a||!b||b<a){$('#in-out').innerHTML='<tbody><tr><td>Enter a valid date range.</td></tr></tbody>';return;}
+  const days=daysBetween(a,b),t=days/365,k={m:12,q:4,y:1}[val('in-t')];
+  const tot=val('in-t')==='s'?P*(1+r*t):P*Math.pow(1+r/k,k*t);
+  $('#in-out').innerHTML=`<tbody><tr><td>Days</td><td class="n">${days}</td></tr><tr><td>Interest</td><td class="n">${inr(tot-P)}</td></tr><tr class="total"><td>Principal plus interest</td><td class="n">${inr(tot)}</td></tr></tbody>`;
+}
+['in-p','in-r','in-a','in-b','in-t'].forEach(i=>$('#'+i).oninput=inRun);
+const GC='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function gstinOk(g){if(!/^[0-3][0-9][A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(g))return 'Wrong format';let s=0;for(let i=0;i<14;i++){const p=GC.indexOf(g[i])*(i%2?2:1);s+=Math.floor(p/36)+p%36;}return GC[(36-s%36)%36]===g[14]?'':'Check digit does not match';}
+function vRun(){
+  const t=val('v-t'),RX={PAN:/^[A-Z]{5}[0-9]{4}[A-Z]$/,TAN:/^[A-Z]{4}[0-9]{5}[A-Z]$/,IFSC:/^[A-Z]{4}0[A-Z0-9]{6}$/,Mobile:/^[6-9][0-9]{9}$/};
+  const rows=val('v-in').split('\n').map(x=>x.trim().toUpperCase().replace(t==='Mobile'?/[\s+-]|^91(?=\d{10}$)/g:/\s/g,'')).filter(Boolean).map(x=>{const e=t==='GSTIN'?gstinOk(x):(RX[t].test(x)?'':'Wrong format');return `<tr><td class="n" style="text-align:left">${esc(x)}</td><td><span class="chip ${e?'bad':'good'}">${e?'Invalid':'Valid'}</span> ${esc(e)}</td></tr>`;});
+  $('#v-out').innerHTML=`<thead><tr><th>${t}</th><th>Result</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="2">Enter values above.</td></tr>'}</tbody>`;
+}
+['v-t','v-in'].forEach(i=>$('#'+i).oninput=vRun);
+$('#b3-f').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=buildTable(await readRows(f),GST_FIELDS),A=aggregate(d);let t={igst:0,cgst:0,sgst:0},n=0;for(const v of A.values()){t.igst+=v.igst;t.cgst+=v.cgst;t.sgst+=v.sgst;n++;}$('#b3-ci').value=R2(t.igst);$('#b3-cc').value=R2(t.cgst);$('#b3-cs').value=R2(t.sgst);$('#b3-s').textContent=f.name+': '+n+' invoices totalled. Includes everything in the file, so remove credit notes, blocked or ineligible ITC first.';b3Run();}catch(x){toast('Could not read that file');}};
+const toLines=rows2d=>{const d=buildTable(rows2d,BANK_FIELDS),m=d.map,c=(r,k)=>m[k]>=0?r[m[k]]:'';return d.rows.map(r=>{const dt=parseDate(c(r,'date')),a=Math.abs(num(c(r,'cr')))-Math.abs(num(c(r,'dr')));return dt&&a?fmtD(dt)+', '+String(c(r,'narr')).replace(/,/g,' ').trim()+', '+a:'';}).filter(Boolean).join('\n');};
+$('#br-fb').onchange=async e=>{const f=e.target.files[0];if(f)try{$('#br-b').value=toLines(await readRows(f));brRun();}catch(x){toast('Could not read that file');}};
+$('#br-fs').onchange=async e=>{const f=e.target.files[0];if(f)try{$('#br-s').value=toLines(await readRows(f));brRun();}catch(x){toast('Could not read that file');}};
+$('#br-use').onclick=()=>{if(!B.txns.length){toast('Load a statement in Bank to Tally first');return;}$('#br-s').value=B.txns.map(t=>fmtD(t.date)+', '+t.narr.replace(/,/g,' ')+', '+(t.cr-t.dr)).join('\n');brRun();};
+$('#br-tx').onclick=()=>{brRun();const M=window.BRM||[];if(!M.length){toast('Nothing missing from the books');return;}saveFile('tally-vouchers.txt',tallyXml(M.map(x=>({date:x.d,narr:x.n,dr:x.a<0?-x.a:0,cr:x.a>0?x.a:0,ledger:applyRule(x.n,B.rules)||'Suspense A/c'})),val('br-bl'),''));};
+
+const UF={
+ bt:[{key:'p',label:'Party',re:/party|name|vendor|payee|deductee/i},{key:'a',label:'Amount',re:/amount|paid|payment|value/i},{key:'pan',label:'PAN',re:/pan/i}],
+ bk:[{key:'l',label:'Ledger',re:/ledger|account|particular|name/i},{key:'d',label:'Debit',re:/debit|dr/i},{key:'c',label:'Credit',re:/credit|cr/i}],
+ dp:[{key:'n',label:'Asset',re:/asset|name|description|particular/i},{key:'c',label:'Cost',re:/cost|wdv|value|amount/i},{key:'r',label:'Rate',re:/rate|%/i}]};
+async function upl(file,k){const d=buildTable(await readRows(file),UF[k]),m=d.map;return d.rows.map(r=>{const o={};UF[k].forEach(f=>o[f.key]=m[f.key]>=0?r[m[f.key]]:'');return o;});}
+const cm=x=>String(x==null?'':x).replace(/,/g,' ').trim();
+$('#bt-f').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const R=await upl(f,'bt');$('#bt-in').value=R.filter(o=>o.p&&num(o.a)).map(o=>cm(o.p)+', '+num(o.a)+', '+(o.pan===''||/^n/i.test(String(o.pan))?'N':'Y')).join('\n');btRun();}catch(x){toast('Could not read that file');}};
+$('#bk-f').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const R=await upl(f,'bk');$('#bk-in').value=R.filter(o=>o.l).map(o=>cm(o.l)+', '+num(o.d)+', '+num(o.c)).join('\n');bkRun();}catch(x){toast('Could not read that file');}};
+$('#dp-f').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const R=(await upl(f,'dp')).filter(o=>o.n&&num(o.c)),w=val('dp-m')==='wdv';let tc=0,td=0;
+  const rows=R.map(o=>{const c=num(o.c),r=num(o.r),d=c*r/100;tc+=c;td+=d;return `<tr><td>${esc(o.n)}</td><td class="n">${inr(c)}</td><td class="n">${r}%</td><td class="n">${inr(d)}</td><td class="n">${inr(c-d)}</td></tr>`;});
+  $('#dp-tb').innerHTML=`<thead><tr><th>Asset</th><th class="n">Opening</th><th class="n">Rate</th><th class="n">Depreciation</th><th class="n">Closing</th></tr></thead><tbody>${rows.join('')}<tr class="total"><td>Total</td><td class="n">${inr(tc)}</td><td></td><td class="n">${inr(td)}</td><td class="n">${inr(tc-td)}</td></tr></tbody>`;}catch(x){toast('Could not read that file');}};
+
+function g1Run(){
+  const st=val('g1-st').trim(),T={};let b2b=0,b2c=0;
+  val('g1-in').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a.length>=4&&num(a[2])).forEach(a=>{
+    const g=a[0].toUpperCase(),tx=num(a[2]),r=num(a[3]),isB=/^[0-9]{2}[A-Z0-9]{13}$/.test(g),inter=isB?g.slice(0,2)!==st:/^i/i.test(a[4]||''),k=(isB?'B2B':'B2C')+'|'+r,e=T[k]||(T[k]={t:isB?'B2B':'B2C',r,tx:0,i:0,c:0,s:0,n:0}),tax=tx*r/100;
+    e.tx+=tx;e.n++;if(inter)e.i+=tax;else{e.c+=tax/2;e.s+=tax/2;}isB?b2b+=tx:b2c+=tx;});
+  const L=Object.values(T).sort((x,y)=>x.t.localeCompare(y.t)||x.r-y.r),sm=f=>L.reduce((t,x)=>t+x[f],0);
+  $('#g1-out').innerHTML=`<thead><tr><th>Type</th><th class="n">Rate</th><th class="n">Invoices</th><th class="n">Taxable</th><th class="n">IGST</th><th class="n">CGST</th><th class="n">SGST</th></tr></thead><tbody>${L.map(x=>`<tr><td>${x.t}</td><td class="n">${x.r}%</td><td class="n">${x.n}</td><td class="n">${inr(x.tx)}</td><td class="n">${inr(x.i)}</td><td class="n">${inr(x.c)}</td><td class="n">${inr(x.s)}</td></tr>`).join('')}<tr class="total"><td>Total</td><td></td><td class="n">${sm('n')}</td><td class="n">${inr(sm('tx'))}</td><td class="n">${inr(sm('i'))}</td><td class="n">${inr(sm('c'))}</td><td class="n">${inr(sm('s'))}</td></tr></tbody>`;
+}
+$('#g1-run').onclick=g1Run;$('#g1-st').oninput=g1Run;
+function tmRun(){
+  const due=d=>d.getMonth()===2?new Date(d.getFullYear(),3,30):new Date(d.getFullYear(),d.getMonth()+1,7),G={};
+  val('tm-d').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>parseDate(a[0])&&num(a[2])).forEach(a=>{const d=parseDate(a[0]),du=due(d),k=du.getTime(),e=G[k]||(G[k]={du,ded:0,start:new Date(d.getFullYear(),d.getMonth(),1)});e.ded+=num(a[2]);});
+  const P=val('tm-p').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>parseDate(a[0])&&num(a[2])).map(a=>({d:parseDate(a[0]),a:num(a[2])}));
+  const rows=Object.values(G).sort((a,b)=>a.du-b.du).map(g=>{const ok=P.filter(p=>p.d>=g.start&&p.d<=g.du).reduce((t,p)=>t+p.a,0),late=P.filter(p=>p.d>g.du&&p.d<=new Date(g.du.getFullYear(),g.du.getMonth()+6,1)).reduce((t,p)=>t+p.a,0),short=Math.max(0,g.ded-ok);
+    const lateAmt=Math.min(short,late),mo=lateAmt?monthsPart(g.du,P.filter(p=>p.d>g.du).sort((a,b)=>a.d-b.d)[0].d):0,intr=lateAmt*0.015*mo;
+    return `<tr><td>${fmtD(g.du)}</td><td class="n">${inr(g.ded)}</td><td class="n">${inr(ok)}</td><td class="n">${inr(short)}</td><td><span class="chip ${short?'bad':'good'}">${short?'Short by '+inr0(short):'On time'}</span></td><td class="n">${inr(intr)}</td></tr>`;});
+  $('#tm-out').innerHTML=`<thead><tr><th>Due</th><th class="n">Deducted</th><th class="n">Paid on time</th><th class="n">Shortfall</th><th>Status</th><th class="n">Interest if paid late</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="6">Enter deductions.</td></tr>'}</tbody>`;
+}
+$('#tm-run').onclick=tmRun;
+function bsRun(){
+  const o=num(val('bs-o')),a=num(val('bs-a')),h=num(val('bs-h')),sl=num(val('bs-s')),r=num(val('bs-r'))/100,left=val('bs-l')==='1',pool=o+a+h-sl,row=(l,v,c)=>`<tr${c?' class="total"':''}><td>${l}</td><td class="n">${inr(v)}</td></tr>`;
+  let out=row('Block value before sale',o+a+h);
+  if(pool<0)out+=row('Short-term capital gain (section 50)',-pool,1)+row('Depreciation',0);
+  else if(!left&&pool>0)out+=row('Short-term capital loss (block ceases)',pool,1)+row('Depreciation',0);
+  else{const bf=Math.max(0,o+a-sl),bh=Math.max(0,h-Math.max(0,sl-(o+a))),d=r*bf+r/2*bh;out+=row('Depreciation for the year',d,1)+row('Closing WDV',pool-d);}
+  $('#bs-out').innerHTML='<tbody>'+out+'</tbody>';
+}
+['bs-o','bs-a','bs-h','bs-s','bs-r','bs-l'].forEach(i=>$('#'+i).oninput=bsRun);
+function iaRun(){
+  const T=num(val('ia-t')),P=[1,2,3,4].map(i=>num(val('ia-'+i))),y=+val('ia-y'),due=parseDate(val('ia-d')),fl=parseDate(val('ia-f')),sa=num(val('ia-sa'));
+  if(!due||!fl){$('#ia-out').innerHTML='<tbody><tr><td>Enter the dates.</td></tr></tbody>';return;}
+  const need=[.15,.45,.75,1],mo=[3,3,3,1];let c=0,c4=[];
+  need.forEach((f,i)=>{const req=T*f,sh=Math.max(0,req-P[i]),ok=(i===0&&P[0]>=T*.12)||(i===1&&P[1]>=T*.36);const m=ok||T<10000?0:sh*.01*mo[i];c+=m;c4.push([i,req,P[i],sh,m]);});
+  const adv=P[3],due234=T>=10000,pct=T?adv/T:1;
+  const b=due234&&pct<.9?Math.max(0,T-adv)*.01*monthsPart(new Date(y,3,1),fl):0;
+  const unpaid=Math.max(0,T-adv),aMo=fl>due?monthsPart(due,fl):0,a=unpaid*.01*aMo;
+  const row=(l,v,t)=>`<tr${t?' class="total"':''}><td>${l}</td><td class="n">${inr(v)}</td></tr>`;
+  $('#ia-out').innerHTML='<tbody>'+row(`234A: late filing (${aMo} months on ${inr0(unpaid)} unpaid at the due date)`,a)+row(`234B: advance tax paid ${(pct*100).toFixed(1)}% of tax${pct>=.9?' (no interest at 90% or more)':''}`,b)+c4.map(x=>row(`234C: by ${['15 Jun','15 Sep','15 Dec','31 Mar'][x[0]]}, needed ${inr0(x[1])}, paid ${inr0(x[2])}`,x[4])).join('')+row('Total interest',a+b+c,1)+'</tbody>';
+  $('#ia-out').insertAdjacentHTML('beforeend','');
+}
+['ia-t','ia-1','ia-2','ia-3','ia-4','ia-y','ia-d','ia-f','ia-sa'].forEach(i=>$('#'+i).oninput=iaRun);
+function words(n){
+  const O=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'],Tn=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const u=x=>x<20?O[x]:Tn[Math.floor(x/10)]+(x%10?' '+O[x%10]:''),h=x=>(x>99?O[Math.floor(x/100)]+' Hundred'+(x%100?' ':''):'')+(x%100?u(x%100):'');
+  if(n===0)return 'Zero';let r='';[[1e7,'Crore'],[1e5,'Lakh'],[1e3,'Thousand']].forEach(([v,l])=>{if(n>=v){r+=h(Math.floor(n/v))+' '+l+' ';n%=v;}});return (r+h(n)).trim();
+}
+function nwRun(){
+  const a=Math.abs(num(val('nw-a'))),r=Math.floor(a+1e-9),p=Math.round((a-r)*100);
+  $('#nw-o').textContent=a>=1e11?'Amount too large.':'Rupees '+words(r)+(p?' and '+words(p)+' Paise':'')+' Only';
+}
+$('#nw-a').oninput=nwRun;
+$('#rm-f').innerHTML=COMPS.map(c=>`<option>${esc(c.label)}</option>`).join('');
+function rmRun(){
+  const d=parseDate(val('rm-d'));
+  $('#rm-o').value=`Dear ${val('rm-c')},\n\nThis is a reminder that the ${val('rm-f')} is due on ${d?fmtD(d):'the due date'}. Please send us ${val('rm-x')} at the earliest so that we can file it on time and avoid late fees and interest.\n\nRegards,\nM/s. Malaji And Co\nEnquiries: 7899824673`;
+}
+['rm-c','rm-f','rm-d','rm-x'].forEach(i=>$('#'+i).oninput=rmRun);
+$('#rm-cp').onclick=()=>{navigator.clipboard.writeText(val('rm-o')).then(()=>toast('Copied'),()=>toast('Copy failed'));};
+$('#rm-wa').onclick=()=>window.open('https://wa.me/?text='+encodeURIComponent(val('rm-o')),'_blank');
+g1Run();tmRun();bsRun();iaRun();nwRun();rmRun();
+
+/* ---------- Platform: theme, print, modules menu, clients, assignments, backup ---------- */
+const ldb=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},sdb=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+$('#th-btn').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';sdb('ca.theme',r.dataset.theme);};
+if(ldb('ca.theme',''))document.documentElement.dataset.theme=ldb('ca.theme','');
+let CUR='';
+$('#pr-btn').onclick=()=>{$('#ph-d').textContent=fmtD(new Date());$('#ph-c').textContent=CUR?'| Client: '+CUR:'';window.print();};
+(function(){
+  const root=$('#tab-more'),nodes=[...root.children];let m=-1;nodes.forEach(n=>{if(n.tagName==='H2')m++;n.dataset.m=m;});
+  const heads=nodes.filter(n=>n.tagName==='H2').map(h=>h.textContent),bar=document.createElement('div');let sel=-1,q='';
+  bar.className='no-print';bar.innerHTML='<input id="mm-q" placeholder="Search modules" aria-label="Search modules" style="width:min(100%,260px)"><div class="filters" id="mm-f"></div>';root.insertBefore(bar,root.firstChild);
+  const show=()=>{nodes.forEach(n=>{const i=+n.dataset.m,ok=(sel<0||sel===i)&&(!q||heads[i].toLowerCase().includes(q));n.hidden=!ok;});
+    $('#mm-f').innerHTML=['All',...heads].map((h,i)=>`<button data-i="${i-1}" aria-pressed="${sel===i-1}">${esc(h)}</button>`).join('');
+    $$('#mm-f button').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;show();});};
+  $('#mm-q').oninput=e=>{q=e.target.value.toLowerCase();sel=-1;show();};show();
+})();
+let CM=ldb('ca.cm',[]),AS=ldb('ca.as',[]);
+function cmRun(){
+  $('#as-cl').innerHTML=CM.map(c=>`<option value="${esc(c.n)}">`).join('');
+  $('#cm-list').innerHTML=`<thead><tr><th>Client</th><th>GSTIN</th><th>PAN</th><th>Mobile</th><th>Email</th><th></th></tr></thead><tbody>${CM.map((c,i)=>`<tr><td>${esc(c.n)}</td><td class="n" style="text-align:left">${esc(c.g)}</td><td class="n" style="text-align:left">${esc(c.p)}</td><td>${esc(c.ph)}</td><td>${esc(c.em||'')}</td><td style="white-space:nowrap"><button class="btn small" data-u="${i}">Use</button> <button class="btn ghost small" data-x="${i}">Delete</button></td></tr>`).join('')||'<tr><td colspan="6">No clients yet.</td></tr>'}</tbody>`;
+  $$('#cm-list [data-u]').forEach(b=>b.onclick=()=>{const c=CM[+b.dataset.u];CUR=c.n;$('#rm-c').value=c.n;if(/^\d{2}/.test(c.g))$('#g1-st').value=c.g.slice(0,2);$('#as-c').value=c.n;rmRun();g1Run();toast('Using '+c.n);});
+  $$('#cm-list [data-x]').forEach(b=>b.onclick=()=>{CM.splice(+b.dataset.x,1);sdb('ca.cm',CM);cmRun();});
+}
+$('#cm-save').onclick=()=>{const n=val('cm-n').trim();if(!n){toast('Enter the client name');return;}const g=val('cm-g').trim().toUpperCase(),pn=val('cm-p').trim().toUpperCase();
+  if(g&&gstinOk(g)){toast('GSTIN looks wrong: '+gstinOk(g));return;}if(pn&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pn)){toast('PAN format looks wrong');return;}
+  CM.push({n,g,p:pn,ph:val('cm-ph').trim(),em:val('cm-em').trim()});sdb('ca.cm',CM);['cm-n','cm-g','cm-p','cm-ph','cm-em'].forEach(i=>$('#'+i).value='');cmRun();};
+const AST=['Not started','In progress','Under review','Filed','Closed'];
+function asRun(){
+  const t=new Date(),open=a=>a.st!=='Filed'&&a.st!=='Closed',fee=AS.reduce((x,a)=>x+a.f,0),rec=AS.reduce((x,a)=>x+a.r,0);
+  $('#as-stats').innerHTML=`<div class="stat"><b>${AS.filter(open).length}</b><span>Open</span></div><div class="stat bad"><b>${AS.filter(a=>open(a)&&a.d&&parseDate(a.d)<t).length}</b><span>Overdue</span></div><div class="stat"><b>₹${inr0(fee)}</b><span>Fees quoted</span></div><div class="stat warn"><b>₹${inr0(fee-rec)}</b><span>Balance to collect</span></div>`;
+  $('#as-list').innerHTML=`<thead><tr><th>Client</th><th>Service</th><th>CA</th><th>Due</th><th>Status</th><th class="n">Fee</th><th class="n">Received</th><th class="n">Balance</th><th></th></tr></thead><tbody>${AS.map((a,i)=>`<tr><td>${esc(a.c)}</td><td>${esc(a.s)}</td><td>${esc(a.ca)}</td><td>${a.d?fmtD(parseDate(a.d)):''}</td><td><select data-st="${i}">${AST.map(x=>`<option${x===a.st?' selected':''}>${x}</option>`).join('')}</select></td><td class="n">${inr0(a.f)}</td><td class="n">${inr0(a.r)}</td><td class="n">${inr0(a.f-a.r)}</td><td style="white-space:nowrap"><button class="btn small" data-rc="${i}">Receipt</button> <button class="btn ghost small" data-x="${i}">Delete</button></td></tr>`).join('')||'<tr><td colspan="9">No assignments yet.</td></tr>'}</tbody>`;
+  $$('#as-list [data-st]').forEach(b=>b.onchange=()=>{AS[+b.dataset.st].st=b.value;sdb('ca.as',AS);asRun();});
+  $$('#as-list [data-x]').forEach(b=>b.onclick=()=>{AS.splice(+b.dataset.x,1);sdb('ca.as',AS);asRun();});
+  $$('#as-list [data-rc]').forEach(b=>b.onclick=()=>{const a=AS[+b.dataset.rc];$('#as-rc').innerHTML=`<div class="panel" style="margin-top:14px"><h3>Receipt</h3><p>Receipt no. MC/${new Date().getFullYear()}/${String(+b.dataset.rc+1).padStart(3,'0')} &nbsp; Date: ${fmtD(new Date())}</p><p>Received with thanks from <b>${esc(a.c)}</b> a sum of <b>₹${inr(a.r)}</b> (Rupees ${words(Math.round(a.r))} Only) towards ${esc(a.s)}. Fee ₹${inr(a.f)}; balance ₹${inr(a.f-a.r)}.</p><p style="margin-top:24px">For M/s. Malaji And Co<br><span class="sub">Authorised signatory</span></p></div>`;});
+}
+$('#as-save').onclick=()=>{const c=val('as-c').trim();if(!c){toast('Enter the client');return;}AS.push({c,s:val('as-s').trim(),ca:val('as-ca').trim(),d:val('as-d'),st:'Not started',f:num(val('as-f')),r:num(val('as-r'))});sdb('ca.as',AS);$('#as-f').value='';$('#as-r').value=0;asRun();};
+function dhRun(){
+  const t=new Date(),open=AS.filter(a=>a.st!=='Filed'&&a.st!=='Closed'),fee=AS.reduce((x,a)=>x+a.f-a.r,0);
+  $('#dh-stats').innerHTML=`<div class="stat"><b>${CM.length}</b><span>Clients</span></div><div class="stat"><b>${open.length}</b><span>Open assignments</span></div><div class="stat bad"><b>${open.filter(a=>a.d&&parseDate(a.d)<t).length}</b><span>Overdue</span></div><div class="stat warn"><b>₹${inr0(fee)}</b><span>Fees to collect</span></div>`;
+  $('#dh-list').innerHTML='<thead><tr><th>Due</th><th>Client</th><th>Service</th></tr></thead><tbody>'+(open.sort((a,b)=>(a.d||'9')<(b.d||'9')?-1:1).slice(0,6).map(a=>`<tr><td>${a.d?fmtD(parseDate(a.d)):'-'}</td><td>${esc(a.c)}</td><td>${esc(a.s)}</td></tr>`).join('')||'<tr><td colspan="3">Nothing open. Add work under Assignments and fees.</td></tr>')+'</tbody>';
+  $('#dh-go').innerHTML=[['gst','GST reconciliation'],['bank','Bank to Tally'],['tracker','Due dates'],['tax','Tax and TDS'],['more','More modules'],['assign','Assignments']].map(x=>`<button data-g="${x[0]}">${x[1]}</button>`).join('');
+  $$('#dh-go button').forEach(b=>b.onclick=()=>{location.hash=b.dataset.g;showTab(b.dataset.g);});
+}
+$('#bk-exp').onclick=()=>{const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('ca.')&&!/^ca\.(pin|key|mid|t0)$/.test(k))o[k]=localStorage.getItem(k);}}catch(e){}saveFile('ca-controlroom-backup.json',JSON.stringify(o,null,1));};
+$('#bk-imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);Object.keys(o).filter(k=>k.startsWith('ca.')&&!/^ca\.(pin|key|mid|t0)$/.test(k)).forEach(k=>localStorage.setItem(k,o[k]));toast('Restored. Reloading.');setTimeout(()=>location.reload(),900);}catch(x){toast('That is not a backup file');}};r.readAsText(f);};
+cmRun();asRun();dhRun();
+
+let IVG=[];
+function ivRun(){
+  const own=val('iv-g').toUpperCase().trim(),st=own.slice(0,2),pos=val('iv-pos').trim(),inter=!!(st&&pos&&st!==pos);
+  const L=val('iv-in').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a[0]&&num(a[2])*num(a[3]));
+  let tx=0,ti=0,tc=0;IVG={};
+  const rows=L.map((a,n)=>{const t=num(a[2])*num(a[3]),r=num(a[4]),x=t*r/100;tx+=t;inter?ti+=x:tc+=x/2;IVG[r]=(IVG[r]||0)+t;return `<tr><td>${n+1}</td><td>${esc(a[0])}</td><td>${esc(a[1])}</td><td class="n">${num(a[2])}</td><td class="n">${inr(num(a[3]))}</td><td class="n">${inr(t)}</td><td class="n">${r}%</td><td class="n">${inr(t+x)}</td></tr>`;});
+  const gt=tx+ti+tc*2,rt=Math.round(gt),dt=parseDate(val('iv-dt'))||new Date();
+  const tr=(l,v,c)=>`<tr${c?' class="total"':''}><td colspan="7" style="text-align:right">${l}</td><td class="n">${inr(v)}</td></tr>`;
+  $('#iv-out').innerHTML=`<div class="panel" style="margin-top:14px"><p class="brand"><span class="logo">M</span>M/s. Malaji And Co</p><p class="sub">SVM College Complex, Office No. 37, Ilkal, Karnataka 587-203 &middot; 7899824673 &middot; Malajiandco@yahoo.com${own?' &middot; GSTIN '+esc(own):''}</p>
+   <h3 style="margin-top:14px">Tax invoice</h3><p>Invoice no. <b>${esc(val('iv-no'))}</b> &nbsp; Date: ${fmtD(dt)}<br>Bill to: <b>${esc(val('iv-bn'))}</b>${val('iv-bg')?' &middot; GSTIN '+esc(val('iv-bg').toUpperCase()):''}<br>Place of supply: ${esc(pos)} (${inter?'inter-state, IGST':'intra-state, CGST and SGST'})</p>
+   <div class="tw"><table><thead><tr><th>#</th><th>Description</th><th>HSN/SAC</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Taxable</th><th class="n">GST</th><th class="n">Amount</th></tr></thead><tbody>${rows.join('')}${tr('Taxable value',tx)}${inter?tr('IGST',ti):tr('CGST',tc)+tr('SGST',tc)}${tr('Round off',rt-gt)}${tr('Invoice total',rt,1)}</tbody></table></div>
+   <p style="margin-top:12px">Amount in words: <b>Rupees ${words(rt)} Only</b></p><p style="margin-top:28px">For M/s. Malaji And Co<br><span class="sub">Authorised signatory</span></p></div>`;
+}
+$('#iv-run').onclick=()=>{if(val('iv-g')&&gstinOk(val('iv-g').toUpperCase().trim())){toast('Your GSTIN: '+gstinOk(val('iv-g').toUpperCase().trim()));return;}ivRun();};
+$('#iv-add').onclick=()=>{ivRun();const bg=val('iv-bg').toUpperCase().trim(),d=parseDate(val('iv-dt'))||new Date(),own=val('iv-g').toUpperCase().slice(0,2),inter=own&&val('iv-pos').trim()!==own;
+  const add=Object.keys(IVG).map(r=>`${bg}, ${val('iv-no')}, ${R2(IVG[r])}, ${r}, ${!bg&&inter?'I':''}, ${fmtD(d)}`).join('\n');if(!add){toast('Prepare an invoice first');return;}
+  $('#g1-in').value=($('#g1-in').value.trim()+'\n'+add).trim();g1Run();toast('Added to the GSTR-1 list');};
+const pjP=()=>{const v=val('pj-p');return v?v.slice(5,7)+v.slice(0,4):'';},pjG=()=>{const g=val('pj-g').toUpperCase().trim(),e=gstinOk(g);if(e){toast('Your GSTIN: '+e);return '';}return g;};
+$('#pj-1').onclick=()=>{
+  const g=pjG(),fp=pjP();if(!g||!fp)return;const st=g.slice(0,2),B={},C={};let noDate=0,gt=0;
+  val('g1-in').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a.length>=4&&num(a[2])).forEach(a=>{
+    const ct=a[0].toUpperCase(),tx=num(a[2]),r=num(a[3]),isB=/^[0-9]{2}[A-Z0-9]{13}$/.test(ct),inter=isB?ct.slice(0,2)!==st:/^i/i.test(a[4]||''),x=R2(tx*r/100),d=parseDate(a[5]);gt+=tx;
+    const det={txval:R2(tx),rt:r,iamt:inter?x:0,camt:inter?0:R2(x/2),samt:inter?0:R2(x/2),csamt:0};
+    if(isB){const k=ct+'|'+a[1],e=B[k]||(B[k]={ct,i:{inum:a[1],idt:d?fmtD(d).replace(/\//g,'-'):('01-'+fp.slice(0,2)+'-'+fp.slice(2)),val:0,pos:ct.slice(0,2),rchrg:'N',inv_typ:'R',itms:[]}});if(!d)noDate++;e.i.val=R2(e.i.val+tx+x);e.i.itms.push({num:e.i.itms.length+1,itm_det:det});}
+    else{const k=(inter?'INTER':'INTRA')+'|'+r,e=C[k]||(C[k]={sply_ty:inter?'INTER':'INTRA',rt:r,typ:'OE',pos:st,txval:0,iamt:0,camt:0,samt:0,csamt:0});['txval','iamt','camt','samt'].forEach(f=>e[f]=R2(e[f]+det[f]));}});
+  const by={};Object.values(B).forEach(e=>(by[e.ct]=by[e.ct]||{ctin:e.ct,inv:[]}).inv.push(e.i));
+  const o={gstin:g,fp,gt:R2(gt),cur_gt:R2(gt),b2b:Object.values(by),b2cs:Object.values(C)};
+  saveFile('GSTR1-'+fp+'.json',JSON.stringify(o,null,1));
+  $('#pj-n').textContent=`GSTR-1 saved: ${Object.keys(B).length} B2B invoices, ${Object.keys(C).length} B2CS rows.`+(noDate?` ${noDate} invoice(s) had no date and use the 1st of the month; fix them before filing.`:'')+' Inter-state consumer rows use your own state as place of supply; correct them in the file if the buyer is elsewhere. Gross turnover fields (gt, cur_gt) show this month only; replace with your actual figures.';};
+$('#pj-3').onclick=()=>{
+  const g=pjG(),fp=pjP();if(!g||!fp)return;const r=+val('b3-rate'),n1=num(val('b3-intra')),n2=num(val('b3-inter')),rev=num(val('b3-rev'))/3,m=R2;
+  const o={gstin:g,ret_period:fp,sup_details:{osup_det:{txval:m(n1+n2),iamt:m(n2*r/100),camt:m(n1*r/200),samt:m(n1*r/200),csamt:0},osup_zero:{txval:0,iamt:0,csamt:0},osup_nil_exmp:{txval:0},isup_rev:{txval:0,iamt:0,camt:0,samt:0,csamt:0},osup_nongst:{txval:0}},
+    itc_elg:{itc_avl:[{ty:'OTH',iamt:m(Math.max(0,num(val('b3-ci'))-rev)),camt:m(Math.max(0,num(val('b3-cc'))-rev)),samt:m(Math.max(0,num(val('b3-cs'))-rev)),csamt:0}],itc_rev:[],itc_inelg:[]}};
+  saveFile('GSTR3B-'+fp+'.json',JSON.stringify(o,null,1));
+  $('#pj-n').textContent='GSTR-3B saved with outward supplies and net ITC from the draft figures. Interest, late fee, RCM and inter-state supply tables are not included; complete them on the portal.';};
+
+/* ---------- Rates and settings ---------- */
+const DEF_TDS=JSON.parse(JSON.stringify(TDS)),DEF_SLABS=NEW_SLABS.map(x=>[...x]),DEF_GST=['0','0.25','3','5','18','40'];
+let RT=ldb('ca.rates',{});
+function rtNote(){
+  const n=document.querySelector('#tab-home .note'),d=RT.upd?parseDate(RT.upd):null;
+  n.textContent=d?`Rates last reviewed on ${fmtD(d)}.`+(daysBetween(d,new Date())>90?' That was over 90 days ago; check for new notifications and update the Rates and settings tab.':''):'Rates follow GST 2.0 (0%, 5%, 18%, 40%) and the notified TDS and income tax slabs. Review them under Rates and settings and set a review date.';
+}
+function applyRates(){
+  const g=RT.gst||DEF_GST;
+  [['gc-rate',x=>1],['b3-rate',x=>+x>=5]].forEach(([id,f])=>{const el=$('#'+id),cur=el.value;el.innerHTML=g.filter(f).map(x=>`<option>${x}</option>`).join('');el.value=[...el.options].some(o=>o.value===cur)?cur:(g.includes('18')?'18':el.options[0].value);});
+  (RT.tds||[]).forEach((t,i)=>{const e=TDS[i];if(!e||e.id!==t.id)return;t.r.forEach((r,j)=>{if(e.opts[j])e.opts[j][1]=r;});t.s==null?delete e.single:e.single=t.s;t.y==null?delete e.year:e.year=t.y;});
+  if(RT.slabs){NEW_SLABS.length=0;RT.slabs.forEach(x=>NEW_SLABS.push([x[0]==null?Infinity:x[0],x[1]]));}
+  rtNote();
+}
+function stRender(){
+  $('#st-g').value=(RT.gst||DEF_GST).join(', ');
+  $('#st-s').value=NEW_SLABS.map(x=>(x[0]===Infinity?'':x[0])+', '+R2(x[1]*100)).join('\n');
+  $('#st-d').value=RT.upd||'';
+  $('#st-t').innerHTML='<thead><tr><th>Section</th><th>Payee type</th><th class="n">Rate %</th><th class="n">Per payment limit</th><th class="n">Yearly limit</th></tr></thead><tbody>'+TDS.map((e,i)=>e.opts.map((o,j)=>`<tr><td>${j?'':esc(e.label)}</td><td>${esc(o[0])}</td><td class="n"><input class="num" data-t="${i}" data-o="${j}" data-k="r" type="number" step="any" value="${o[1]}" style="width:80px"></td><td class="n">${j?'':`<input class="num" data-t="${i}" data-k="s" type="number" value="${e.single==null?'':e.single}" style="width:110px">`}</td><td class="n">${j?'':`<input class="num" data-t="${i}" data-k="y" type="number" value="${e.year==null?'':e.year}" style="width:110px">`}</td></tr>`).join('')).join('')+'</tbody>';
+}
+function stRefresh(){tdOpts();tdRun();itRun();gcRun();b3Run();btRun();}
+$('#st-save').onclick=()=>{
+  const g=val('st-g').split(',').map(x=>x.trim()).filter(x=>x!==''&&isFinite(x)&&+x>=0);if(!g.length||!g.includes('18')&&!confirm('The list does not include 18%. Save anyway?'))return;
+  const sl=val('st-s').split('\n').filter(l=>l.trim()).map(l=>{const a=l.split(',').map(x=>x.trim());return [a[0]===''||isNaN(+a[0])?null:+a[0],num(a[1])/100];});
+  if(!sl.length||sl[sl.length-1][0]!==null||sl.slice(0,-1).some((x,i,a)=>x[0]===null||(i&&x[0]<=a[i-1][0]))){toast('Slabs must rise in order and the last line must have no amount');return;}
+  const t=TDS.map((e,i)=>({id:e.id,r:e.opts.map((o,j)=>num($(`#st-t [data-t="${i}"][data-o="${j}"]`).value)),s:$(`#st-t [data-t="${i}"][data-k="s"]`).value===''?null:num($(`#st-t [data-t="${i}"][data-k="s"]`).value),y:$(`#st-t [data-t="${i}"][data-k="y"]`).value===''?null:num($(`#st-t [data-t="${i}"][data-k="y"]`).value)}));
+  RT={gst:g,slabs:sl,tds:t,upd:val('st-d')};sdb('ca.rates',RT);applyRates();stRefresh();toast('Rates saved');
+};
+$('#st-reset').onclick=()=>{
+  RT={};sdb('ca.rates',RT);
+  TDS.forEach((e,i)=>{const d=DEF_TDS[i];e.opts.forEach((o,j)=>o[1]=d.opts[j][1]);d.single==null?delete e.single:e.single=d.single;d.year==null?delete e.year:e.year=d.year;});
+  NEW_SLABS.length=0;DEF_SLABS.forEach(x=>NEW_SLABS.push([...x]));applyRates();stRender();stRefresh();toast('Built-in rates restored');
+};
+applyRates();stRender();
+
+/* ---------- Final modules ---------- */
+const mergeFiles=async(files)=>{let all=await readRows(files[0]);for(let i=1;i<files.length;i++){const r=await readRows(files[i]);all=all.concat(r.slice(findHeader(r,GST_FIELDS)+1));}return all;};
+$('#gf-books').onchange=async e=>{const f=[...e.target.files];if(f.length)try{gstLoaded('books',await mergeFiles(f),f.length>1?f.length+' files':f[0].name);}catch(x){toast('Could not read the files');}};
+$('#gf-2b').onchange=async e=>{const f=[...e.target.files];if(f.length)try{gstLoaded('g2b',await mergeFiles(f),f.length>1?f.length+' files':f[0].name);}catch(x){toast('Could not read the files');}};
+$('#ms-run').onclick=()=>{
+  const R=G.rows;if(!R||!R.length){toast('Reconcile on the GST tab first');return;}
+  const M={},S={};
+  R.forEach(r=>{const k=r.date?r.date.getFullYear()+'-'+String(r.date.getMonth()+1).padStart(2,'0'):'No date',m=M[k]||(M[k]={m:0,d:0,n:0,b:0,risk:0});
+    if(r.status==='matched')m.m++;else if(r.status==='differs')m.d++;else if(r.status==='notin2b'){m.n++;m.risk+=r.bTax;}else m.b++;
+    if(r.status==='notin2b'||r.status==='differs'){const g=S[r.gstin]||(S[r.gstin]={n:0,risk:0});g.n++;g.risk+=r.status==='notin2b'?r.bTax:Math.max(0,r.diff);}});
+  $('#ms-m').innerHTML='<thead><tr><th>Month</th><th class="n">Matched</th><th class="n">Differs</th><th class="n">Not in 2B</th><th class="n">Not in books</th><th class="n">ITC at risk</th></tr></thead><tbody>'+Object.keys(M).sort().map(k=>`<tr><td>${k}</td><td class="n">${M[k].m}</td><td class="n">${M[k].d}</td><td class="n">${M[k].n}</td><td class="n">${M[k].b}</td><td class="n">${inr(M[k].risk)}</td></tr>`).join('')+'</tbody>';
+  $('#ms-s').innerHTML='<thead><tr><th>Supplier GSTIN</th><th class="n">Invoices</th><th class="n">ITC at risk</th></tr></thead><tbody>'+Object.keys(S).sort((a,b)=>S[b].risk-S[a].risk).slice(0,25).map(k=>`<tr><td class="n" style="text-align:left">${esc(k)}</td><td class="n">${S[k].n}</td><td class="n">${inr(S[k].risk)}</td></tr>`).join('')+'</tbody>';
+};
+const nk=t=>String(t).toUpperCase().replace(/[^A-Z0-9]/g,'');
+function taRun(){
+  const rd=id=>{const m={};val(id).split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a[0]&&a.length>=3).forEach(a=>{const k=nk(a[0]),e=m[k]||(m[k]={n:a[0],tds:0});e.tds+=num(a[2]);});return m;};
+  const A=rd('ta-a'),B=rd('ta-b'),used=new Set(),rows=[];
+  Object.keys(A).forEach(k=>{const bk=Object.keys(B).find(x=>!used.has(x)&&(x===k||(x.length>=5&&k.length>=5&&(x.startsWith(k)||k.startsWith(x)))));if(bk)used.add(bk);const b=bk?B[bk].tds:0,d=A[k].tds-b;rows.push([A[k].n,A[k].tds,bk?b:null,d,!bk?'In 26AS, not in books: book it':Math.abs(d)<=1?'Matched':d>0?'26AS higher: book the difference':'Books higher: claim only 26AS amount']);});
+  Object.keys(B).filter(k=>!used.has(k)).forEach(k=>rows.push([B[k].n,null,B[k].tds,-B[k].tds,'In books, not in 26AS: do not claim until it appears']));
+  $('#ta-out').innerHTML='<thead><tr><th>Deductor</th><th class="n">26AS TDS</th><th class="n">Books TDS</th><th class="n">Difference</th><th>Result</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${esc(r[0])}</td><td class="n">${r[1]==null?'-':inr(r[1])}</td><td class="n">${r[2]==null?'-':inr(r[2])}</td><td class="n">${inr(r[3])}</td><td><span class="chip ${r[4]==='Matched'?'good':'warn'}">${esc(r[4])}</span></td></tr>`).join('')+'</tbody>';
+}
+$('#ta-run').onclick=taRun;
+let RQ=[];
+function rqRun(){
+  const t=new Date(),G2={},F=[],due7=d=>d.getMonth()===2?new Date(d.getFullYear(),3,30):new Date(d.getFullYear(),d.getMonth()+1,7);RQ=[];
+  val('rq-in').split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>a.length>=6&&parseDate(a[3])).forEach(a=>{
+    const d=parseDate(a[3]),mo=d.getMonth(),fy=mo>=3?d.getFullYear():d.getFullYear()-1,q=mo>=3&&mo<=5?1:mo>=6&&mo<=8?2:mo>=9?3:4,k=fy+'|'+q,amt=num(a[4]),tds=num(a[5]),dep=parseDate(a[6]||''),du=due7(d);
+    const g=G2[k]||(G2[k]={fy,q,n:0,amt:0,tds:0,dep:0});g.n++;g.amt+=amt;g.tds+=tds;if(dep)g.dep+=tds;
+    const pan=/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(a[1].toUpperCase()),e=TDS.find(x=>x.id===nk(a[2])),min=e?Math.min(...e.opts.map(o=>o[1])):null,fl=[];
+    if(!pan)fl.push('PAN missing or invalid: TDS should be at least 20% (higher of 20% or the section rate)');
+    if(!pan&&amt&&tds<amt*.2-1)fl.push('Short deduction: 20% of '+inr0(amt)+' is '+inr0(amt*.2));
+    else if(pan&&min!=null&&amt&&tds<amt*min/100-1)fl.push('Short deduction: at '+min+'% it should be '+inr0(amt*min/100));
+    if(!dep)fl.push('Not deposited; due '+fmtD(du)+(du<t?', interest '+inr0(tds*.015*monthsPart(du,t))+' so far':''));
+    else if(dep>du)fl.push('Deposited late on '+fmtD(dep)+'; interest about '+inr0(tds*.015*monthsPart(du,dep)));
+    fl.forEach(m=>F.push([a[0],m]));RQ.push({Deductee:a[0],PAN:a[1],Section:a[2],'Payment date':fmtD(d),Amount:amt,'TDS deducted':tds,'Deposit date':dep?fmtD(dep):'',Quarter:'Q'+q+' FY '+fy+'-'+String(fy+1).slice(2),Remarks:fl.join('; ')});});
+  const fd=g=>new Date(g.q===1?g.fy:g.q===2?g.fy:g.q===3?g.fy+1:g.fy+1,g.q===1?6:g.q===2?9:g.q===3?0:4,g.q===1?31:g.q===2?31:g.q===3?31:31);
+  $('#rq-q').innerHTML=`<thead><tr><th>Quarter</th><th class="n">Entries</th><th class="n">Amount paid</th><th class="n">TDS deducted</th><th class="n">TDS deposited</th><th>${esc(val('rq-f').slice(0,3))} due</th></tr></thead><tbody>${Object.values(G2).sort((a,b)=>a.fy-b.fy||a.q-b.q).map(g=>{const du=fd(g);return `<tr><td>Q${g.q} FY ${g.fy}-${String(g.fy+1).slice(2)}</td><td class="n">${g.n}</td><td class="n">${inr(g.amt)}</td><td class="n">${inr(g.tds)}</td><td class="n">${inr(g.dep)}</td><td>${fmtD(du)} <span class="chip ${du<t?'warn':'mute'}">${du<t?'Check filed':'Upcoming'}</span></td></tr>`;}).join('')||'<tr><td colspan="6">Enter deductions.</td></tr>'}</tbody>`;
+  $('#rq-f2').innerHTML=F.length?'<thead><tr><th>Deductee</th><th>Flag</th></tr></thead><tbody>'+F.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td><span class="chip good">All clear</span> No flags on these lines.</td></tr></tbody>';
+}
+$('#rq-run').onclick=rqRun;
+$('#rq-x').onclick=()=>{rqRun();const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(RQ),'Annexure');saveFile('tds-return-working.xlsx',XLSX.write(wb,{type:'array',bookType:'xlsx'}));};
+function ftRun(){
+  const g=id=>num(val(id)),sal=g('ft-sal'),std=sal>0?1:0,age=val('ft-age');
+  const nGti=sal+Math.max(0,g('ft-hp'))+g('ft-bus')+g('ft-oth'),oGti=sal+Math.max(g('ft-hp'),-200000)+g('ft-bus')+g('ft-oth');
+  const nTi=Math.max(0,nGti-std*75000),oTi=Math.max(0,oGti-std*50000-Math.min(g('ft-c'),150000)-g('ft-d')-g('ft-v'));
+  const n=calcRegime('new',nTi,age),o=calcRegime('old',oTi,age),sp=(g('ft-st')*g('ft-r1')/100+Math.max(0,g('ft-lt')-g('ft-ex'))*g('ft-r2')/100)*1.04,nT=n.total+sp,oT=o.total+sp,best=Math.min(nT,oT),bn=nT<=oT,cr=g('ft-t')+g('ft-a');
+  const row=(l,a,b,t)=>`<tr${t?' class="total"':''}><td>${l}</td><td class="n">${inr0(a)}</td><td class="n">${inr0(b)}</td></tr>`;
+  $('#ft-out').innerHTML=`<thead><tr><th></th><th class="n${bn?' best':''}">New regime${bn?' (lower)':''}</th><th class="n${bn?'':' best'}">Old regime${bn?'':' (lower)'}</th></tr></thead><tbody>${row('Taxable income (normal)',n.ti,o.ti)}${row('Tax on normal income with rebate, surcharge and cess',n.total,o.total)}${row('Tax on capital gains with cess',sp,sp)}${row('Total tax',nT,oT,1)}${row('Less: TDS, TCS and advance tax',cr,cr)}${row('Balance payable (refund if negative)',nT-cr,oT-cr,1)}</tbody>`;
+  const need=best-g('ft-t'),y=g('ft-y');
+  if(need>10000){let prev=0;$('#ft-adv').innerHTML=`<h3 style="margin-top:16px">Advance tax on the lower figure (${bn?'new':'old'} regime), after TDS ${inr0(need)}</h3><div class="tw"><table><thead><tr><th>By</th><th class="n">Cumulative</th><th class="n">This instalment</th></tr></thead><tbody>${[[.15,'15 Jun '+y],[.45,'15 Sep '+y],[.75,'15 Dec '+y],[1,'15 Mar '+(y+1)]].map(([f,d])=>{const c=Math.round(need*f),i=c-prev;prev=c;return `<tr><td>${d}</td><td class="n">${inr0(c)}</td><td class="n">${inr0(i)}</td></tr>`;}).join('')}</tbody></table></div><p class="note">Advance tax already paid: ${inr0(g('ft-a'))}. Remaining to pay: ${inr0(Math.max(0,need-g('ft-a')))}.</p>`;}
+  else $('#ft-adv').innerHTML='<p class="note">Tax after TDS is ₹10,000 or less, so no advance tax is due.</p>';
+}
+['ft-age','ft-sal','ft-hp','ft-bus','ft-oth','ft-st','ft-lt','ft-r1','ft-r2','ft-ex','ft-c','ft-d','ft-v','ft-t','ft-a','ft-y'].forEach(i=>$('#'+i).oninput=ftRun);
+ftRun();
+b3Run();btRun();brRun();bkRun();dpRun();inRun();vRun();
+
+gcRun();lfRun();itRun();tdOpts();tdRun();tiRun();lf2Run();
+window.APP={get COMPS(){return COMPS},get TR(){return TR},get CM(){return CM},get AS(){return AS},saveTR,trRender,trCheckboxes,cmRun,asRun,dhRun,showTab,toast,esc,inr,inr0,fmtD,parseDate,daysBetween,today0,taskStatus,saveFile};
+if(window.afterAppStart)window.afterAppStart();
+showTab(location.hash.slice(1));
+</script>
+<footer class="foot"><span>&copy; 2026 M/s. Malaji And Co. All Rights Reserved.</span><span>Enquiries: 7899824673 &middot; Malajiandco@yahoo.com</span></footer>
+</body></html>

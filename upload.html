@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Send documents</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#f4f8fd;--surface:#fff;--fg:#0f2342;--muted:#5a6b85;--line:#d5e0ef;--accent:#1546a0;--gold:#f5b81c;--good:#1e7a46;--bad:#b3261e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0b1730;--surface:#12234a;--fg:#e8eefb;--muted:#9fb1d3;--line:#25396b;--accent:#6ea8ff;--gold:#ffcc3d;--good:#5fd08c;--bad:#ff8f86;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1730;--surface:#12234a;--fg:#e8eefb;--muted:#9fb1d3;--line:#25396b;--accent:#6ea8ff;--gold:#ffcc3d;--good:#5fd08c;--bad:#ff8f86;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;padding:16px}
+.card{max-width:520px;margin:24px auto;background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:10px;padding:22px}
+h1{font-size:1.3rem;margin:0 0 4px}.sub{color:var(--muted);margin:0}
+.drop{display:block;border:2px dashed var(--line);border-radius:8px;padding:22px;text-align:center;margin:16px 0;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent)}input[type=file]{display:none}
+textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+button{font:inherit;font-weight:600;width:100%;margin-top:12px;padding:12px;border:0;border-radius:6px;background:var(--accent);color:#fff;cursor:pointer}button:disabled{opacity:.5}
+ul{list-style:none;padding:0;margin:10px 0 0}li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;word-break:break-all}
+.ok{color:var(--good)}.err{color:var(--bad)}.brand{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+</style></head>
+<body><div class="card" id="app"><p class="sub">Loading...</p></div>
+<script src="lib/supabase.js"></script><script src="config.js"></script>
+<script>
+(function(){
+  const app=document.getElementById('app'),cfg=window.CA_CONFIG||{},t=new URLSearchParams(location.search).get('t')||'';
+  const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const size=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+  const MAX=20*1048576;
+  if(!cfg.supabaseUrl||!t){app.innerHTML='<h1>Link not valid</h1><p class="sub">Please ask your CA office for a new upload link.</p>';return;}
+  const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false}});
+  let files=[];
+  (async()=>{
+    const {data,error}=await sb.rpc('link_info',{t});
+    if(error||!data){app.innerHTML='<h1>Link not active</h1><p class="sub">This upload link has been switched off. Please ask your CA office for a new one.</p>';return;}
+    document.title='Send documents to '+data.firm;
+    app.innerHTML=`<p class="brand">${h(data.firm)}</p><h1>Send your documents</h1><p class="sub">For ${h(data.client)}. Choose bills, bank statements, Form 16 or any other papers (PDF, photos, Excel; up to 20 MB each) and press Upload.</p>
+      <label class="drop" id="drop"><input type="file" id="f" multiple accept=".pdf,.jpg,.jpeg,.png,.heic,.xls,.xlsx,.csv,.doc,.docx,.zip,.json,.txt"><b>Tap to choose files</b><br><span class="sub">or drop them here</span></label>
+      <ul id="list"></ul><textarea id="note" rows="3" placeholder="Message for the office (optional), e.g. bills for October"></textarea>
+      <button id="go" disabled>Upload</button><p id="msg" class="sub" style="margin-top:10px"></p>`;
+    const f=document.getElementById('f'),drop=document.getElementById('drop'),go=document.getElementById('go');
+    const add=fl=>{[...fl].forEach(x=>files.push({file:x,st:x.size>MAX?'too big':''}));show();};
+    const show=()=>{document.getElementById('list').innerHTML=files.map(x=>`<li><span>${h(x.file.name)} <span class="sub">${size(x.file.size)}</span></span><span class="${x.st==='sent'?'ok':x.st&&x.st!=='sending'?'err':''}">${h(x.st==='sent'?'Sent':x.st)}</span></li>`).join('');go.disabled=!files.some(x=>!x.st);};
+    f.onchange=()=>{add(f.files);f.value='';};
+    ['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over');}));
+    ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over');}));
+    drop.addEventListener('drop',ev=>add(ev.dataTransfer.files));
+    go.onclick=async()=>{
+      go.disabled=true;const note=document.getElementById('note').value.trim();let ok=0,bad=0;
+      for(const x of files){if(x.st)continue;x.st='sending';show();
+        const safe=x.file.name.replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80),path=t+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'-'+safe;
+        const up=await sb.storage.from('inbox').upload(path,x.file,{contentType:x.file.type||'application/octet-stream',upsert:false});
+        if(up.error){x.st='failed, try again';bad++;show();continue;}
+        const r=await sb.rpc('inbox_add',{t,p:path,n:x.file.name,s:x.file.size,note});
+        if(r.error){x.st='failed, try again';bad++;}else{x.st='sent';ok++;}show();}
+      document.getElementById('msg').innerHTML=ok?`<span class="ok">${ok} file(s) sent. Thank you!</span>${bad?' Some files failed; choose them again and press Upload.':' You can close this page or send more.'}`:'<span class="err">Upload failed. Check the internet connection and try again.</span>';
+      files=files.filter(x=>x.st!=='sent'&&x.st!=='too big');files.forEach(x=>x.st='');show();
+    };
+  })();
+})();
+</script></body></html>

@@ -1,0 +1,82 @@
+
+<!-- ============ DUE-DATE CALENDAR (new) ============ -->
+<section class="tab" id="tab-calendar" hidden>
+  <h2>Due-date calendar</h2>
+  <p class="hint">Every filing for every client, laid out by date. Assign each filing to a team member, tick it off, and send reminders to the client or the staff member on WhatsApp or email with one click. Filings come from the clients and filings you pick in the Compliance tracker.</p>
+  <div class="row no-print">
+    <button class="btn ghost small" id="cal-prev" aria-label="Previous month">&larr;</button>
+    <label class="fld">Month<input id="cal-month" type="month"></label>
+    <button class="btn ghost small" id="cal-next" aria-label="Next month">&rarr;</button>
+    <label class="fld">Assigned to<select id="cal-who"><option value="">Everyone</option><option value="__me">Only me</option><option value="__none">Not assigned</option></select></label>
+    <label class="fld">Type<select id="cal-grp"><option value="">All types</option></select></label>
+    <label class="fld">Show<select id="cal-show"><option value="pending">Pending only</option><option value="all">All</option><option value="overdue">Overdue only</option></select></label>
+  </div>
+  <div class="stats" id="cal-stats"></div>
+  <div class="cal-grid" id="cal-grid" aria-label="Month calendar"></div>
+
+  <h2>Filings this month</h2>
+  <p class="hint">"Client" opens WhatsApp with a ready message to the client's mobile from the Client master. "Staff" sends the task to the person it is assigned to. Messages open in your own WhatsApp or email, so nothing is sent without you pressing Send.</p>
+  <div class="row no-print" style="margin-bottom:10px">
+    <button class="btn small" id="cal-digest">WhatsApp each staff member their week</button>
+    <button class="btn ghost small" id="cal-ics">Add this month to Google / Outlook calendar (.ics)</button>
+    <button class="btn ghost small" id="cal-ics-y">Whole financial year (.ics)</button>
+  </div>
+  <div class="tw tall" id="cal-list"></div>
+
+  <h2>Set up filings automatically</h2>
+  <div class="panel stack">
+    <p class="note" style="margin:0">Adds every client from the Client master to the Compliance tracker with the usual filings for their type, read from the PAN and GSTIN: a company (4th letter C) gets ROC forms and audit ITR, a firm or LLP (F) gets audit ITR and LLP forms, an individual (P) gets the non-audit ITR, and any client with a GSTIN gets monthly GSTR-1 and 3B. Clients already in the tracker are left as they are. You can edit each one afterwards.</p>
+    <div class="row"><button class="btn" id="cal-auto">Add Client master clients to the tracker</button><span class="sub" id="cal-auto-n"></span></div>
+  </div>
+
+  <details><summary>Message templates</summary>
+    <div class="panel stack" style="margin-top:10px">
+      <p class="note" style="margin:0">Use {client}, {filing}, {period}, {due}, {docs}, {firm} and {staff}. Saved for the whole firm.</p>
+      <label class="fld">Client reminder<textarea id="cal-tpl-c" rows="4"></textarea></label>
+      <label class="fld">Staff task<textarea id="cal-tpl-s" rows="3"></textarea></label>
+      <div class="row"><button class="btn small" id="cal-tpl-save">Save templates</button><button class="btn ghost small" id="cal-tpl-reset">Reset to default</button></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ TEAM (new) ============ -->
+<section class="tab" id="tab-team" hidden>
+  <h2>Team and logins</h2>
+  <p class="hint">Each person signs in with their own email and password. <b>Partner</b> sees everything and manages the team. <b>Staff</b> uses every tool and sees fees. <b>Article</b> uses every tool but does not see fees, rates and settings, or backup.</p>
+  <div id="team-body"></div>
+</section>
+
+<!-- ============ BILLING (new) ============ -->
+<section class="tab" id="tab-billing" hidden>
+  <h2>Fee invoices and outstanding</h2>
+  <p class="hint">Raise GST invoices for your fees, record payments (including TDS the client deducted), and follow up on what is outstanding. Invoice numbers run in a series per financial year.</p>
+  <div class="stats" id="bl-stats"></div>
+  <div class="row no-print" style="margin-bottom:12px"><button class="btn" id="bl-new">New invoice</button><button class="btn ghost" id="bl-xlsx">Save register as Excel</button>
+    <label class="fld">Show<select id="bl-show"><option value="open">Unpaid and part paid</option><option value="all">All invoices</option><option value="paid">Paid</option></select></label>
+    <label class="fld">Client<input id="bl-fc" list="as-cl" placeholder="All clients" style="width:180px"></label></div>
+  <div id="bl-form"></div>
+  <div class="tw tall" id="bl-list"></div>
+  <h2>Outstanding by client</h2>
+  <div class="tw" id="bl-age"></div>
+  <details style="margin-top:18px"><summary>Firm details used on invoices</summary><div class="panel" style="margin-top:10px" id="bl-firm"></div></details>
+</section>
+
+<!-- ============ TIME AND WORK (new) ============ -->
+<section class="tab" id="tab-work" hidden>
+  <h2>Time and work</h2>
+  <p class="hint">Record time on each client with the timer or by hand. Partners see who is working on what, what is overdue, and how the time compares with the fees billed.</p>
+  <div class="grid">
+    <div class="panel stack" id="wk-timer"></div>
+    <div class="panel stack" id="wk-manual"></div>
+  </div>
+  <h2>My time</h2>
+  <div class="tw" id="wk-mine"></div>
+  <div id="wk-dash"></div>
+</section>
+
+<!-- ============ DOCUMENT INBOX (new) ============ -->
+<section class="tab" id="tab-inbox" hidden>
+  <h2>Client document inbox</h2>
+  <p class="hint">Give each client a private upload link. They open it on their phone or computer, pick files (bills, bank statements, Form 16) and press Upload; no login needed. The files arrive here for the whole team.</p>
+  <div id="ib-body"></div>
+</section>
