@@ -113,19 +113,13 @@ footer.foot{border-top:3px solid var(--gold)}
 <nav class="tabs" role="tablist" aria-label="Tools">
   <button role="tab" data-tab="home" aria-selected="true">Home</button>
   <button role="tab" data-tab="gst" aria-selected="false">GST</button>
-  <button role="tab" data-tab="bank" aria-selected="false">Bank to Tally</button>
-  <button role="tab" data-tab="tracker" aria-selected="false">Compliance tracker</button>
-  <button role="tab" data-tab="calendar" aria-selected="false">Due-date calendar</button>
+  <button role="tab" data-tab="bank" aria-selected="false">Bank and books</button>
   <button role="tab" data-tab="tax" aria-selected="false">Tax and TDS</button>
-  <button role="tab" data-tab="more" aria-selected="false">More modules</button>
+  <button role="tab" data-tab="tracker" aria-selected="false">Compliance</button>
   <button role="tab" data-tab="clients" aria-selected="false">Clients</button>
-  <button role="tab" data-tab="assign" aria-selected="false">Assignments and fees</button>
-  <button role="tab" data-tab="settings" aria-selected="false">Rates and settings</button>
-  <button role="tab" data-tab="billing" aria-selected="false">Billing</button>
+  <button role="tab" data-tab="assign" aria-selected="false">Fees and billing</button>
   <button role="tab" data-tab="work" aria-selected="false">Time and work</button>
-  <button role="tab" data-tab="inbox" aria-selected="false">Document inbox</button>
-  <button role="tab" data-tab="team" aria-selected="false">Team</button>
-  <button role="tab" data-tab="backup" aria-selected="false">Backup</button>
+  <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
 </nav>
 
 
@@ -616,6 +610,10 @@ Kumar and Sons, KLMNO5678P, 194C, 05/07/2026, 90000, 900,</textarea><div class="
   <div id="ib-body"></div>
 </section>
 
+<section class="tab" id="tab-gsttools" hidden></section>
+<section class="tab" id="tab-books" hidden></section>
+<section class="tab" id="tab-taxtools" hidden></section>
+
 </div>
 <div id="toast" hidden></div>
 <div id="gate" class="gate" hidden></div>
@@ -633,6 +631,7 @@ Kumar and Sons, KLMNO5678P, 194C, 05/07/2026, 90000, 900,</textarea><div class="
 <script src="js/inbox.js"></script>
 <script src="js/gst-plus.js"></script>
 <script src="js/bank-plus.js"></script>
+<script src="js/tabs.js"></script>
 <script src="js/cloud.js"></script>
 <script type="text/plain" id="app-src">
 //#logic-start
@@ -851,7 +850,7 @@ function renderMap(el,d,fields,onChange){
 }
 
 /* tabs */
-const TABS=['home','gst','bank','tracker','calendar','tax','more','clients','assign','billing','work','inbox','settings','team','backup'];
+const TABS=['home','gst','bank','tracker','calendar','tax','more','clients','assign','billing','work','inbox','settings','team','backup','gsttools','books','taxtools'];
 function showTab(t){
   if(!TABS.includes(t))t='home';
   TABS.forEach(x=>{$('#tab-'+x).hidden=x!==t;});

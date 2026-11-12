@@ -65,7 +65,7 @@ sub1('</div>\n<div id="toast" hidden></div>',
 sub1('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>',
      '<script src="lib/xlsx.full.min.js"></script>\n<script src="lib/supabase.js"></script>\n'
      '<script src="config.js"></script>\n<script src="js/extras.js"></script>\n<script src="js/calendar.js"></script>\n'
-     '<script src="js/store.js"></script>\n<script src="js/team.js"></script>\n<script src="js/billing.js"></script>\n<script src="js/work.js"></script>\n<script src="js/inbox.js"></script>\n<script src="js/gst-plus.js"></script>\n<script src="js/bank-plus.js"></script>\n<script src="js/cloud.js"></script>')
+     '<script src="js/store.js"></script>\n<script src="js/team.js"></script>\n<script src="js/billing.js"></script>\n<script src="js/work.js"></script>\n<script src="js/inbox.js"></script>\n<script src="js/gst-plus.js"></script>\n<script src="js/bank-plus.js"></script>\n<script src="js/tabs.js"></script>\n<script src="js/cloud.js"></script>')
 
 # 8. The original script now runs after login (cloud.js starts it).
 sub1('<script>\n//#logic-start', '<script type="text/plain" id="app-src">\n//#logic-start')
@@ -78,7 +78,7 @@ sub1("  if(!dl){toast('Saving files is not available in this view. Use Copy inst
 
 # 10. Tabs: allow the new tabs and let other modules hook in when a tab opens.
 sub1("const TABS=['home','gst','bank','tracker','tax','more','clients','assign','settings','backup'];",
-     "const TABS=['home','gst','bank','tracker','calendar','tax','more','clients','assign','billing','work','inbox','settings','team','backup'];")
+     "const TABS=['home','gst','bank','tracker','calendar','tax','more','clients','assign','billing','work','inbox','settings','team','backup','gsttools','books','taxtools'];")
 sub1("  if(t==='home'&&window.dhRun)dhRun();\n}",
      "  if(t==='home'&&window.dhRun)dhRun();\n  if(window.onTabShown)window.onTabShown(t);\n}")
 
@@ -90,6 +90,19 @@ sub1("showTab(location.hash.slice(1));\n</script>",
 
 out = out.replace('<!--#new-sections-->', open(sys.argv[3], encoding='utf-8').read())
 out = out.replace('CA Daily Desk', 'CA ControlRoom').replace('ca-daily-desk', 'ca-controlroom')  # product renamed 2026-11-12
+# Tabs that do the same kind of work are merged into 9 groups (2026-11-12); js/tabs.js adds the sub-tabs.
+import re as _re
+out = _re.sub(r'(<nav class="tabs" role="tablist" aria-label="Tools">).*?(</nav>)', lambda m: m.group(1) + '''
+  <button role="tab" data-tab="home" aria-selected="true">Home</button>
+  <button role="tab" data-tab="gst" aria-selected="false">GST</button>
+  <button role="tab" data-tab="bank" aria-selected="false">Bank and books</button>
+  <button role="tab" data-tab="tax" aria-selected="false">Tax and TDS</button>
+  <button role="tab" data-tab="tracker" aria-selected="false">Compliance</button>
+  <button role="tab" data-tab="clients" aria-selected="false">Clients</button>
+  <button role="tab" data-tab="assign" aria-selected="false">Fees and billing</button>
+  <button role="tab" data-tab="work" aria-selected="false">Time and work</button>
+  <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+''' + m.group(2), out, count=1, flags=_re.S)
 # Firm name removed from the app header and browser tab (2026-11-12); it stays on invoices, receipts and printouts.
 out = out.replace('<title>CA ControlRoom | M/s. Malaji And Co</title>', '<title>CA ControlRoom</title>')
 out = out.replace('<div><p class="brand"><span class="logo">M</span>M/s. Malaji And Co</p><h1>CA ControlRoom</h1></div>', '<div><h1>CA ControlRoom</h1></div>')
