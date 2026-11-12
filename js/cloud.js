@@ -51,7 +51,7 @@
       gateMsg(signup ? 'Creating your login...' : 'Signing in...');
       let r;
       if (signup) {
-        r = await Cloud.sb.auth.signUp({ email, password, options: { data: { name: $('#g-name').value.trim() } } });
+        r = await Cloud.sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname, data: { name: $('#g-name').value.trim() } } });
         if (!r.error && !r.data.session) { gateMsg('Check your email and click the confirmation link, then sign in.'); return; }
       } else r = await Cloud.sb.auth.signInWithPassword({ email, password });
       if (r.error) { gateMsg(friendly(r.error.message), true); return; }
